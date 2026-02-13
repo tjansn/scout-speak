@@ -2,5 +2,6 @@ In order to create useful feedback as backpressure for the implementation and ve
 
 - unit tests for every important function we implement
 - pre-commit hooks triggering a linter, typechecks and a check to inhibt exposition of secrets
+- Acceptance tests as the real functionality tests, Gherkin style
 
 choose the best fitting for the techtstack and architecture we use
