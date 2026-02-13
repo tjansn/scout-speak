@@ -292,3 +292,56 @@ Each module has a simple interface that hides internal complexity:
 | JitterBuffer | `write(chunk)`, `read()` | Algorithm is encapsulated |
 
 Modules can be tested in isolation. Swapping STT or TTS model doesn't affect other modules.
+
+---
+
+## Multi-Transport Priority (FR-13)
+
+Scout is a **single voice transport** that connects to OpenClaw. When multiple transports are active simultaneously (e.g., Scout voice + Discord text), **OpenClaw Gateway handles transport priority**, not Scout.
+
+### How Priority Works
+
+The most recently used transport receives responses:
+
+```
+1. User speaks via Scout
+   └─▶ OpenClaw marks Scout as "most recent transport"
+   └─▶ Response routed to Scout
+
+2. User types in Discord
+   └─▶ OpenClaw marks Discord as "most recent transport"
+   └─▶ Response routed to Discord
+
+3. User speaks via Scout again
+   └─▶ OpenClaw updates priority back to Scout
+   └─▶ Response routed to Scout
+```
+
+### Scout's Role
+
+Scout does **not** implement multi-transport coordination:
+
+- Scout sends transcripts to OpenClaw via the CLI/API
+- Scout receives responses addressed to it
+- Scout does not know about other transports (Discord, web, etc.)
+- Scout does not arbitrate between transports
+
+### OpenClaw's Role
+
+OpenClaw Gateway handles all transport coordination:
+
+- Tracks which transport was used most recently
+- Routes agent responses to the correct transport
+- Maintains consistent agent identity across all transports
+- Manages session context shared by all transports
+
+### Why This Design
+
+| Concern | Handled By | Rationale |
+|---------|------------|-----------|
+| Transport priority | OpenClaw | Central coordination, single source of truth |
+| Agent identity/memory | OpenClaw | Consistent across all transports |
+| Voice I/O | Scout | Specialized for audio capture and playback |
+| Session management | OpenClaw | Avoids duplication, ensures consistency |
+
+This separation keeps Scout simple (I/O only) while OpenClaw handles the complexity of multi-transport scenarios.

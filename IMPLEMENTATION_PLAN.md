@@ -239,7 +239,7 @@ This document defines the complete implementation roadmap for Scout Phase 0 - a 
   - isPaused getter and paused status in getStats()
   - Full test coverage in tests/unit/session/session-manager.test.mjs
 
-**M6: First-Run Setup, Error Handling & Features - IN PROGRESS (2026-02-13) [9/10 tasks complete]**
+**M6: First-Run Setup, Error Handling & Features - COMPLETE (2026-02-13)**
 - T035: First-Run Detection ✓
   - src/config/first-run.mjs implementation
   - FirstRunDetector class with check() method
@@ -355,6 +355,13 @@ This document defines the complete implementation roadmap for Scout Phase 0 - a 
   - Outputs P50/P95 statistics for all latency categories
   - Full test coverage in tests/unit/utils/latency-metrics.test.mjs (52 tests)
   - Full test coverage in tests/unit/utils/performance-monitor.test.mjs (32 tests)
+
+- T044: Document Transport Priority (FR-13) ✓
+  - Multi-Transport Priority section added to specs/system_architecture_and_data_flow.md
+  - README.md updated with transport priority explanation
+  - Scout's role as single voice transport clarified
+  - OpenClaw Gateway's responsibility for transport arbitration documented
+  - No implementation code needed - documentation only
 
 **What Exists:**
 - Discord voice bots (`voice/discord-voice-v6.mjs`) using CLOUD ElevenLabs STT/TTS and direct Anthropic API calls
@@ -1887,10 +1894,16 @@ idle -> listening -> processing -> speaking -> listening -> ...
 
 ---
 
-### T044: Document Transport Priority (FR-13)
+### T044: Document Transport Priority (FR-13) ✓
 **Priority:** P3
 **Dependencies:** None
 **Description:** Document that FR-13 (Transport Priority) is handled by OpenClaw, not Scout.
+
+**Implementation:**
+- Added Multi-Transport Priority section to `specs/system_architecture_and_data_flow.md`
+- Updated `README.md` with transport priority explanation
+- Clarified Scout's role as single voice transport
+- Documented OpenClaw Gateway's responsibility for transport arbitration
 
 **Specification Reference:** `prd.md` FR-13
 - Most recently used transport receives responses
@@ -1900,9 +1913,9 @@ idle -> listening -> processing -> speaking -> listening -> ...
 Scout Phase 0 is a single voice transport. When multiple transports are active (e.g., Scout + Discord), OpenClaw Gateway handles priority based on most recent activity. This is not Scout's responsibility.
 
 **Acceptance Criteria:**
-- [ ] README documents that OpenClaw handles multi-transport priority
-- [ ] Architecture docs clarify Scout's role as single transport
-- [ ] No implementation required in Scout codebase
+- [x] README documents that OpenClaw handles multi-transport priority
+- [x] Architecture docs clarify Scout's role as single transport
+- [x] No implementation required in Scout codebase
 
 **Test Requirements:**
 - None (documentation only)
