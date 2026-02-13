@@ -282,6 +282,20 @@ This document defines the complete implementation roadmap for Scout Phase 0 - a 
   - Brief disconnections (<5s) do not crash session per PRD NFR Reliability
   - Full test coverage (36 tests) in tests/unit/openclaw/connection-recovery.test.mjs
 
+- T040: Config Persistence (FR-10) ✓
+  - src/config/config-persistence.mjs implementation
+  - ConfigPersistence class for reliable configuration storage
+  - FR-10: Gateway URL preserved after restart ✓
+  - FR-10: Gateway token preserved securely after restart ✓
+  - All settings preserved across restarts ✓
+  - Corruption detection via JSON validation and checksums ✓
+  - Automatic backup creation before writes
+  - Backup restoration on corruption detection
+  - Atomic writes (write to temp, then rename) for crash safety
+  - External change detection via checksum comparison
+  - Events: loaded, saved, backup_created, backup_restored, corruption_detected, error
+  - Full test coverage (37 tests) in tests/unit/config/config-persistence.test.mjs
+
 **What Exists:**
 - Discord voice bots (`voice/discord-voice-v6.mjs`) using CLOUD ElevenLabs STT/TTS and direct Anthropic API calls
 - Comprehensive specification documents in `specs/` (12 files, ~50KB)
