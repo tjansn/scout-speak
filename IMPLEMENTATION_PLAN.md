@@ -6,7 +6,7 @@ This document defines the complete implementation roadmap for Scout Phase 0 - a 
 
 ### Current State Analysis (Verified 2026-02-13)
 
-**Project Status:** M1 COMPLETE. M2 implementation NOT STARTED.
+**Project Status:** M2 COMPLETE. M3 implementation NOT STARTED.
 
 **Plan Verification:** All 12 specification files reviewed. All 51 tasks verified against specs. Priority order confirmed correct per backpressure.md. No blocking gaps identified.
 
@@ -75,6 +75,37 @@ This document defines the complete implementation roadmap for Scout Phase 0 - a 
   - pacat process spawning
   - Write with backpressure handling
   - Immediate stop for barge-in
+
+**M2: Speech Processing (VAD, STT) - COMPLETE (2026-02-13)**
+- T012: Silero VAD Model Loading ✓
+  - src/vad/silero-vad.mjs implementation
+  - ONNX model loading via onnxruntime-node
+  - Speech probability inference per frame
+
+- T013: VAD Processing Pipeline ✓
+  - src/vad/vad-processor.mjs implementation
+  - Speech start/end detection with configurable thresholds
+  - Silence duration tracking and minimum speech filtering
+
+- T014: whisper.cpp Build and Setup ✓
+  - Documentation and specs provided
+  - Build process documented for aarch64/Termux
+  - Model download automation
+
+- T015: STT Module (whisper.cpp wrapper) ✓
+  - src/stt/stt.mjs implementation
+  - WAV file creation and CLI invocation
+  - Output parsing and error handling
+
+- T016: STT Empty/Garbage Detection ✓
+  - isGarbageTranscript function in stt.mjs
+  - Empty string and noise pattern detection
+  - "Didn't catch that" fallback handling
+
+- T017: Audio Capture to STT Integration ✓
+  - src/stt/speech-pipeline.mjs implementation
+  - Complete AudioCapture -> VAD -> STT pipeline
+  - Event-based interface with proper state management
 
 **What Exists:**
 - Discord voice bots (`voice/discord-voice-v6.mjs`) using CLOUD ElevenLabs STT/TTS and direct Anthropic API calls
