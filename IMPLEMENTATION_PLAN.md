@@ -221,6 +221,15 @@ This document defines the complete implementation roadmap for Scout Phase 0 - a 
   - isPaused getter and paused status in getStats()
   - Full test coverage in tests/unit/session/session-manager.test.mjs
 
+**M6: First-Run Setup, Error Handling & Features - IN PROGRESS (2026-02-13)**
+- T035: First-Run Detection ✓
+  - src/config/first-run.mjs implementation
+  - FirstRunDetector class with check() method
+  - Detects missing config, invalid JSON, validation errors
+  - Events: first_run_detected, config_valid, config_invalid
+  - Helper functions: isFirstRun(), checkFirstRun()
+  - Full test coverage (32 tests)
+
 **What Exists:**
 - Discord voice bots (`voice/discord-voice-v6.mjs`) using CLOUD ElevenLabs STT/TTS and direct Anthropic API calls
 - Comprehensive specification documents in `specs/` (12 files, ~50KB)
