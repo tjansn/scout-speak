@@ -17,7 +17,7 @@
 import { EventEmitter } from 'events';
 
 /**
- * @typedef {'idle' | 'listening' | 'processing' | 'speaking'} ConversationStatus
+ * @typedef {'idle' | 'waiting_for_wakeword' | 'listening' | 'processing' | 'speaking'} ConversationStatus
  */
 
 /**
@@ -32,10 +32,11 @@ import { EventEmitter } from 'events';
  * @type {Map<ConversationStatus, ConversationStatus[]>}
  */
 const VALID_TRANSITIONS = new Map([
-  ['idle', ['listening']],
-  ['listening', ['processing', 'idle']],
+  ['idle', ['listening', 'waiting_for_wakeword']],
+  ['waiting_for_wakeword', ['listening', 'idle']], // listening = wake word detected, idle = session end
+  ['listening', ['processing', 'idle', 'waiting_for_wakeword']], // waiting_for_wakeword = return to wake word mode after turn
   ['processing', ['speaking', 'listening', 'idle']], // listening = error/retry, idle = fatal
-  ['speaking', ['listening', 'idle']]
+  ['speaking', ['listening', 'idle', 'waiting_for_wakeword']] // waiting_for_wakeword = wake word mode after speaking
 ]);
 
 /**
@@ -164,6 +165,30 @@ export class ConversationState extends EventEmitter {
   }
 
   /**
+   * Start waiting for wake word (FR-11)
+   * Used when wake word is enabled to gate listening
+   */
+  startWaitingForWakeWord() {
+    this.transition('waiting_for_wakeword', 'wake_word_mode');
+  }
+
+  /**
+   * Wake word detected, start listening (FR-11)
+   */
+  wakeWordDetected() {
+    if (this._status === 'waiting_for_wakeword') {
+      this.transition('listening', 'wake_word_detected');
+    }
+  }
+
+  /**
+   * Return to waiting for wake word (after turn completion)
+   */
+  returnToWakeWordMode() {
+    this.transition('waiting_for_wakeword', 'turn_complete');
+  }
+
+  /**
    * Start processing (speech ended)
    * @param {string} transcript - The transcribed text
    */
@@ -268,6 +293,14 @@ export class ConversationState extends EventEmitter {
    */
   isInteractive() {
     return this._status === 'listening' || this._status === 'speaking';
+  }
+
+  /**
+   * Check if currently waiting for wake word (FR-11)
+   * @returns {boolean}
+   */
+  isWaitingForWakeWord() {
+    return this._status === 'waiting_for_wakeword';
   }
 
   /**

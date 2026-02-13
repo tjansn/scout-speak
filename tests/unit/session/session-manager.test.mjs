@@ -1024,6 +1024,240 @@ describe('SessionManager', () => {
   });
 });
 
+describe('SessionManager wake word support (FR-11)', () => {
+  /** @type {SessionManager} */
+  let manager;
+  /** @type {MockSpeechPipeline} */
+  let mockSpeechPipeline;
+  /** @type {MockTtsPipeline} */
+  let mockTtsPipeline;
+  /** @type {MockOpenClawClient} */
+  let mockOpenClawClient;
+  /** @type {MockConnectionMonitor} */
+  let mockConnectionMonitor;
+
+  function createTestManagerWithWakeWord(wakeWordEnabled = false, wakeWordPhrase = 'hey scout') {
+    manager = new SessionManager({
+      ...TEST_CONFIG,
+      wakeWordEnabled,
+      wakeWordPhrase
+    });
+
+    // Add error handler to prevent test crashes
+    addErrorHandler(manager);
+
+    // Replace internal components with mocks
+    mockSpeechPipeline = new MockSpeechPipeline();
+    mockTtsPipeline = new MockTtsPipeline();
+    mockOpenClawClient = new MockOpenClawClient();
+    mockConnectionMonitor = new MockConnectionMonitor();
+
+    manager._speechPipeline = mockSpeechPipeline;
+    manager._ttsPipeline = mockTtsPipeline;
+    manager._openclawClient = mockOpenClawClient;
+    manager._connectionMonitor = mockConnectionMonitor;
+
+    manager._setupSpeechPipelineEvents();
+    manager._setupTtsPipelineEvents();
+    manager._setupConnectionEvents();
+    manager._setupWakeWordEvents();
+
+    manager._initialized = true;
+  }
+
+  afterEach(async () => {
+    if (manager) {
+      await manager.dispose();
+      manager = null;
+    }
+  });
+
+  describe('wake word disabled (default)', () => {
+    beforeEach(() => {
+      createTestManagerWithWakeWord(false);
+    });
+
+    it('should start in listening state when wake word is disabled', async () => {
+      await manager.start();
+
+      assert.strictEqual(manager.status, 'listening');
+    });
+
+    it('should report wake word as disabled', () => {
+      assert.strictEqual(manager.isWakeWordEnabled, false);
+    });
+  });
+
+  describe('wake word enabled', () => {
+    beforeEach(() => {
+      createTestManagerWithWakeWord(true, 'hey scout');
+    });
+
+    it('should start in waiting_for_wakeword state when enabled', async () => {
+      await manager.start();
+
+      assert.strictEqual(manager.status, 'waiting_for_wakeword');
+    });
+
+    it('should report wake word as enabled', () => {
+      assert.strictEqual(manager.isWakeWordEnabled, true);
+    });
+
+    it('should report configured wake phrase', () => {
+      assert.strictEqual(manager.wakeWordPhrase, 'hey scout');
+    });
+
+    it('should transition to listening when wake word is detected', async () => {
+      await manager.start();
+      assert.strictEqual(manager.status, 'waiting_for_wakeword');
+
+      // Simulate wake word detection
+      mockSpeechPipeline.simulateTranscript('hey scout');
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      assert.strictEqual(manager.status, 'listening');
+    });
+
+    it('should emit wake_word_detected event', async () => {
+      let eventData = null;
+      manager.on('wake_word_detected', (data) => { eventData = data; });
+
+      await manager.start();
+      mockSpeechPipeline.simulateTranscript('hey scout');
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      assert.ok(eventData);
+      assert.strictEqual(eventData.wakePhrase, 'hey scout');
+    });
+
+    it('should not transition on non-wake-word speech', async () => {
+      await manager.start();
+      assert.strictEqual(manager.status, 'waiting_for_wakeword');
+
+      mockSpeechPipeline.simulateTranscript('hello world');
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      assert.strictEqual(manager.status, 'waiting_for_wakeword');
+    });
+
+    it('should return to waiting_for_wakeword after speaking', async () => {
+      await manager.start();
+
+      // Wake word detected
+      mockSpeechPipeline.simulateTranscript('hey scout');
+      await new Promise(resolve => setTimeout(resolve, 50));
+      assert.strictEqual(manager.status, 'listening');
+
+      // User says something
+      mockOpenClawClient.setNextResponse({ text: 'Hello!', sessionId: 's1', durationMs: 100 });
+      mockSpeechPipeline.simulateTranscript('what is the weather');
+      await new Promise(resolve => setTimeout(resolve, 200));
+
+      // After speaking completes, should return to waiting for wake word
+      assert.strictEqual(manager.status, 'waiting_for_wakeword');
+    });
+
+    it('should process remaining text after wake phrase', async () => {
+      let transcriptData = null;
+      manager.on('transcript', (data) => { transcriptData = data; });
+
+      await manager.start();
+
+      // Wake phrase with command: "hey scout what is the weather"
+      mockOpenClawClient.setNextResponse({ text: 'Nice weather!', sessionId: 's1', durationMs: 100 });
+      mockSpeechPipeline.simulateTranscript('hey scout what is the weather');
+      await new Promise(resolve => setTimeout(resolve, 200));
+
+      // Should have processed the remaining text
+      assert.ok(transcriptData);
+      assert.strictEqual(transcriptData.text, 'what is the weather');
+    });
+  });
+
+  describe('runtime wake word control', () => {
+    beforeEach(() => {
+      createTestManagerWithWakeWord(false);
+    });
+
+    it('should enable wake word at runtime', async () => {
+      await manager.start();
+      assert.strictEqual(manager.status, 'listening');
+
+      manager.enableWakeWord();
+
+      assert.strictEqual(manager.isWakeWordEnabled, true);
+      assert.strictEqual(manager.status, 'waiting_for_wakeword');
+    });
+
+    it('should disable wake word at runtime', async () => {
+      createTestManagerWithWakeWord(true);
+      await manager.start();
+      assert.strictEqual(manager.status, 'waiting_for_wakeword');
+
+      manager.disableWakeWord();
+
+      assert.strictEqual(manager.isWakeWordEnabled, false);
+      assert.strictEqual(manager.status, 'listening');
+    });
+
+    it('should emit wake_word_enabled event', async () => {
+      let eventEmitted = false;
+      manager.on('wake_word_enabled', () => { eventEmitted = true; });
+
+      await manager.start();
+      manager.enableWakeWord();
+
+      assert.strictEqual(eventEmitted, true);
+    });
+
+    it('should emit wake_word_disabled event', async () => {
+      createTestManagerWithWakeWord(true);
+      let eventEmitted = false;
+      manager.on('wake_word_disabled', () => { eventEmitted = true; });
+
+      await manager.start();
+      manager.disableWakeWord();
+
+      assert.strictEqual(eventEmitted, true);
+    });
+
+    it('should change wake phrase at runtime', async () => {
+      createTestManagerWithWakeWord(true, 'hey scout');
+      await manager.start();
+
+      manager.setWakeWordPhrase('ok computer');
+
+      assert.strictEqual(manager.wakeWordPhrase, 'ok computer');
+    });
+
+    it('should emit wake_word_phrase_changed event', async () => {
+      createTestManagerWithWakeWord(true);
+
+      let eventData = null;
+      manager.on('wake_word_phrase_changed', (data) => { eventData = data; });
+
+      await manager.start();
+      manager.setWakeWordPhrase('ok computer');
+
+      assert.ok(eventData);
+      assert.strictEqual(eventData.phrase, 'ok computer');
+    });
+  });
+
+  describe('getStats with wake word', () => {
+    it('should include wake word stats', async () => {
+      createTestManagerWithWakeWord(true, 'hey scout');
+      await manager.start();
+
+      const stats = manager.getStats();
+
+      assert.ok(stats.wakeWord);
+      assert.strictEqual(stats.wakeWord.enabled, true);
+      assert.strictEqual(stats.wakeWord.wakePhrase, 'hey scout');
+    });
+  });
+});
+
 describe('SessionManager integration scenarios', () => {
   /**
    * Test complete conversation flow with mocked dependencies

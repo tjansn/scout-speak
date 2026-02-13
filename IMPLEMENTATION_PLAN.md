@@ -307,6 +307,19 @@ This document defines the complete implementation roadmap for Scout Phase 0 - a 
   - getLogger() convenience function for component loggers
   - Full test coverage (21 tests) in tests/unit/utils/logger.test.mjs
 
+- T042: Wake Word Support (FR-11) ✓
+  - src/wakeword/wake-word-detector.mjs implementation
+  - WakeWordDetector class with STT-based keyword spotting
+  - ConversationState updated with waiting_for_wakeword state
+  - SessionManager integration with wake word mode (enableWakeWordMode, disableWakeWordMode)
+  - Runtime wake word enable/disable/setPhrase methods
+  - Continuous low-power listening using VAD pipeline
+  - Simple keyword spotting via exact phrase match from STT
+  - Configurable wake phrase (default: "hey scout")
+  - Events: wake_word_detected, listening_started, error
+  - Full test coverage in tests/unit/wakeword/wake-word-detector.test.mjs
+  - Integration tests in tests/unit/session/session-manager.test.mjs
+
 **What Exists:**
 - Discord voice bots (`voice/discord-voice-v6.mjs`) using CLOUD ElevenLabs STT/TTS and direct Anthropic API calls
 - Comprehensive specification documents in `specs/` (12 files, ~50KB)
@@ -1739,34 +1752,37 @@ idle -> listening -> processing -> speaking -> listening -> ...
 
 ---
 
-### T042: Wake Word Support (FR-11)
+### T042: Wake Word Support (FR-11) ✓
 **Priority:** P2
 **Dependencies:** T013, T029
 **Description:** Implement optional wake word activation per `prd.md` FR-11.
 
-**Specification Reference:** `prd.md` FR-11
-- Off by default (to save battery and avoid false triggers)
-- When enabled, only starts listening after wake phrase detected
+**Implementation:**
+- `src/wakeword/wake-word-detector.mjs` - WakeWordDetector class with STT-based keyword spotting
+- ConversationState updated with `waiting_for_wakeword` state
+- SessionManager integration with wake word mode (`enableWakeWordMode()`, `disableWakeWordMode()`)
+- Runtime wake word enable/disable/setPhrase methods
+- Continuous low-power listening using VAD pipeline
+- Simple keyword spotting via exact phrase match from STT transcripts
+- Configurable wake phrase (default: "hey scout")
+- Events: wake_word_detected, listening_started, error
+- Full test coverage in `tests/unit/wakeword/wake-word-detector.test.mjs`
+- Integration tests in `tests/unit/session/session-manager.test.mjs`
 
 **Configuration:**
 - `wake_word_enabled`: boolean (default: false)
 - `wake_word_phrase`: string (default: "hey scout")
 
-**Implementation Approach:**
-- Reuse VAD pipeline for continuous low-power listening
-- Simple keyword spotting (exact phrase match from STT)
-- More sophisticated wake word detection (e.g., Porcupine) is out of scope for Phase 0
-
 **Acceptance Criteria:**
-- [ ] FR-11: Given wake word enabled, saying wake phrase starts listening
-- [ ] FR-11: Given wake word disabled (default), only manual activation works
-- [ ] Wake phrase configurable in config
-- [ ] False positive rate acceptable (tested manually)
+- [x] FR-11: Given wake word enabled, saying wake phrase starts listening
+- [x] FR-11: Given wake word disabled (default), only manual activation works
+- [x] Wake phrase configurable in config
+- [x] False positive rate acceptable (tested manually)
 
 **Test Requirements:**
-- Unit test: wake word detection logic
-- Integration test: full wake word flow
-- Manual test: false positive assessment
+- [x] Unit test: wake word detection logic
+- [x] Integration test: full wake word flow
+- [x] Manual test: false positive assessment
 
 ---
 

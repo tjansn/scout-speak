@@ -33,6 +33,7 @@ import { SpeechPipeline } from '../stt/speech-pipeline.mjs';
 import { OpenClawClient } from '../openclaw/openclaw-client.mjs';
 import { ConnectionMonitor } from '../openclaw/connection-monitor.mjs';
 import { TtsPlaybackPipeline } from '../tts/tts-playback-pipeline.mjs';
+import { WakeWordDetector } from '../wakeword/wake-word-detector.mjs';
 
 /**
  * @typedef {import('../config/config.mjs').Config} Config
@@ -59,6 +60,8 @@ import { TtsPlaybackPipeline } from '../tts/tts-playback-pipeline.mjs';
  * @property {number} [connectionPollMs=5000] - Connection check interval
  * @property {boolean} [bargeInEnabled=true] - Whether barge-in is enabled
  * @property {number} [bargeInCooldownMs=200] - Barge-in cooldown/debounce period
+ * @property {boolean} [wakeWordEnabled=false] - Whether wake word detection is enabled (FR-11)
+ * @property {string} [wakeWordPhrase='hey scout'] - Wake word phrase to listen for (FR-11)
  */
 
 /**
@@ -77,7 +80,9 @@ export const DEFAULT_SESSION_CONFIG = Object.freeze({
   connectionPollMs: 5000,
   bargeInEnabled: true,
   bargeInCooldownMs: 200,
-  persistSession: true
+  persistSession: true,
+  wakeWordEnabled: false,
+  wakeWordPhrase: 'hey scout'
 });
 
 /**
@@ -150,8 +155,15 @@ export class SessionManager extends EventEmitter {
       });
     }
 
+    /** @type {WakeWordDetector} - Wake word detector for hands-free activation (FR-11) */
+    this._wakeWordDetector = new WakeWordDetector({
+      enabled: this._config.wakeWordEnabled ?? false,
+      wakePhrase: this._config.wakeWordPhrase ?? 'hey scout'
+    });
+
     this._setupStateEvents();
     this._setupConnectionEvents();
+    this._setupWakeWordEvents();
   }
 
   /**
@@ -264,7 +276,7 @@ export class SessionManager extends EventEmitter {
   }
 
   /**
-   * Start the session (begin listening)
+   * Start the session (begin listening or waiting for wake word)
    * @returns {Promise<void>}
    */
   async start() {
@@ -290,8 +302,12 @@ export class SessionManager extends EventEmitter {
       this._speechPipeline.start();
     }
 
-    // Transition to listening state
-    this._state.startListening();
+    // Transition to appropriate state based on wake word config (FR-11)
+    if (this._wakeWordDetector.isEnabled) {
+      this._state.startWaitingForWakeWord();
+    } else {
+      this._state.startListening();
+    }
 
     this.emit('started');
   }
@@ -417,7 +433,8 @@ export class SessionManager extends EventEmitter {
       openclawConnected: this._state.openclawConnected,
       speechPipeline: this._speechPipeline?.getStats() ?? null,
       ttsPipeline: this._ttsPipeline?.getStats() ?? null,
-      connectionMonitor: this._connectionMonitor.getStats()
+      connectionMonitor: this._connectionMonitor.getStats(),
+      wakeWord: this._wakeWordDetector.getStats()
     };
   }
 
@@ -457,6 +474,20 @@ export class SessionManager extends EventEmitter {
 
     this._connectionMonitor.on('error', (err) => {
       this.emit('error', { type: 'connection_monitor', message: err.message });
+    });
+  }
+
+  /**
+   * Set up wake word detector events (FR-11)
+   * @private
+   */
+  _setupWakeWordEvents() {
+    this._wakeWordDetector.on('detected', (data) => {
+      this.emit('wake_word_detected', data);
+    });
+
+    this._wakeWordDetector.on('not_detected', (data) => {
+      this.emit('wake_word_missed', data);
     });
   }
 
@@ -512,13 +543,17 @@ export class SessionManager extends EventEmitter {
     });
 
     this._ttsPipeline.on('speaking_complete', () => {
-      // Playback finished, return to listening
+      // Playback finished, return to listening or wake word mode
       this._speechPipeline?.setPlaybackActive(false);
       this.emit('speaking_complete');
 
-      // Continue conversation loop
+      // Continue conversation loop (FR-11: return to wake word mode if enabled)
       if (this._running && this._state.status === 'speaking') {
-        this._state.playbackComplete();
+        if (this._wakeWordDetector.isEnabled) {
+          this._state.returnToWakeWordMode();
+        } else {
+          this._state.playbackComplete();
+        }
       }
     });
 
@@ -587,6 +622,22 @@ export class SessionManager extends EventEmitter {
    * @private
    */
   async _handleTranscript(text, audioDurationMs, sttDurationMs) {
+    // Handle wake word mode (FR-11)
+    if (this._state.status === 'waiting_for_wakeword') {
+      const detected = this._wakeWordDetector.processTranscript(text);
+      if (detected) {
+        // Wake word detected, transition to listening
+        this._state.wakeWordDetected();
+        // If there's remaining text after wake word, process it immediately
+        const result = this._wakeWordDetector.check(text);
+        if (result?.remainingText && result.remainingText.trim().length > 0) {
+          // Process the remaining text as a command
+          await this._handleTranscript(result.remainingText, audioDurationMs, sttDurationMs);
+        }
+      }
+      return;
+    }
+
     // Prevent processing if we're not in the right state
     if (!this._running || this._state.status !== 'listening') {
       return;
@@ -728,6 +779,60 @@ export class SessionManager extends EventEmitter {
   }
 
   /**
+   * Check if wake word detection is enabled (FR-11)
+   * @returns {boolean}
+   */
+  get isWakeWordEnabled() {
+    return this._wakeWordDetector.isEnabled;
+  }
+
+  /**
+   * Get the current wake word phrase (FR-11)
+   * @returns {string}
+   */
+  get wakeWordPhrase() {
+    return this._wakeWordDetector.wakePhrase;
+  }
+
+  /**
+   * Enable wake word detection (FR-11)
+   *
+   * When enabled, the session will start in waiting_for_wakeword state
+   * and only begin listening after the wake phrase is detected.
+   */
+  enableWakeWord() {
+    this._wakeWordDetector.enable();
+    // If currently listening and we're enabling wake word, transition to wake word mode
+    if (this._state.status === 'listening') {
+      this._state.returnToWakeWordMode();
+    }
+    this.emit('wake_word_enabled');
+  }
+
+  /**
+   * Disable wake word detection (FR-11)
+   *
+   * When disabled, the session will go directly to listening state.
+   */
+  disableWakeWord() {
+    this._wakeWordDetector.disable();
+    // If currently waiting for wake word and we're disabling, transition to listening
+    if (this._state.status === 'waiting_for_wakeword') {
+      this._state.wakeWordDetected(); // Use this to transition to listening
+    }
+    this.emit('wake_word_disabled');
+  }
+
+  /**
+   * Set the wake word phrase (FR-11)
+   * @param {string} phrase - New wake word phrase
+   */
+  setWakeWordPhrase(phrase) {
+    this._wakeWordDetector.setWakePhrase(phrase);
+    this.emit('wake_word_phrase_changed', { phrase });
+  }
+
+  /**
    * Dispose of all resources
    */
   async dispose() {
@@ -747,6 +852,9 @@ export class SessionManager extends EventEmitter {
       this._ttsPipeline.dispose();
       this._ttsPipeline = null;
     }
+
+    // Dispose wake word detector (FR-11)
+    this._wakeWordDetector.dispose();
 
     // Reset state
     this._state.reset();

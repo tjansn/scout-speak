@@ -334,4 +334,94 @@ describe('ConversationState', () => {
       assert.strictEqual(newState.status, 'idle');
     });
   });
+
+  describe('wake word state transitions (FR-11)', () => {
+    it('should allow idle -> waiting_for_wakeword', () => {
+      state.startWaitingForWakeWord();
+      assert.strictEqual(state.status, 'waiting_for_wakeword');
+    });
+
+    it('should allow waiting_for_wakeword -> listening (wake word detected)', () => {
+      state.startWaitingForWakeWord();
+      state.wakeWordDetected();
+      assert.strictEqual(state.status, 'listening');
+    });
+
+    it('should allow waiting_for_wakeword -> idle (session end)', () => {
+      state.startWaitingForWakeWord();
+      state.stop();
+      assert.strictEqual(state.status, 'idle');
+    });
+
+    it('should allow listening -> waiting_for_wakeword (return to wake word mode)', () => {
+      state.startListening();
+      state.returnToWakeWordMode();
+      assert.strictEqual(state.status, 'waiting_for_wakeword');
+    });
+
+    it('should allow speaking -> waiting_for_wakeword (turn complete with wake word mode)', () => {
+      state.startListening();
+      state.startProcessing('Hello');
+      state.startSpeaking('Hi there!');
+      state.returnToWakeWordMode();
+      assert.strictEqual(state.status, 'waiting_for_wakeword');
+    });
+
+    it('should report isWaitingForWakeWord correctly', () => {
+      assert.strictEqual(state.isWaitingForWakeWord(), false);
+
+      state.startWaitingForWakeWord();
+      assert.strictEqual(state.isWaitingForWakeWord(), true);
+
+      state.wakeWordDetected();
+      assert.strictEqual(state.isWaitingForWakeWord(), false);
+    });
+
+    it('should not trigger wakeWordDetected when not in waiting state', () => {
+      state.startListening();
+      // Should not throw, but should not change state
+      state.wakeWordDetected();
+      assert.strictEqual(state.status, 'listening');
+    });
+
+    it('should emit state change events for wake word transitions', () => {
+      /** @type {Array<{from: string, to: string, reason?: string}>} */
+      const events = [];
+      state.on('stateChange', (event) => events.push(event));
+
+      state.startWaitingForWakeWord();
+      state.wakeWordDetected();
+
+      assert.strictEqual(events.length, 2);
+      assert.strictEqual(events[0].to, 'waiting_for_wakeword');
+      assert.strictEqual(events[0].reason, 'wake_word_mode');
+      assert.strictEqual(events[1].to, 'listening');
+      assert.strictEqual(events[1].reason, 'wake_word_detected');
+    });
+
+    it('should support full conversation cycle with wake word', () => {
+      /** @type {Array<{from: string, to: string, reason?: string}>} */
+      const events = [];
+      state.on('stateChange', (event) => events.push(event));
+
+      // Start in wake word mode
+      state.startWaitingForWakeWord();
+      assert.strictEqual(state.status, 'waiting_for_wakeword');
+
+      // Wake word detected
+      state.wakeWordDetected();
+      assert.strictEqual(state.status, 'listening');
+
+      // Normal conversation flow
+      state.startProcessing('Hello');
+      state.startSpeaking('Hi there!');
+
+      // Return to wake word mode after speaking
+      state.returnToWakeWordMode();
+      assert.strictEqual(state.status, 'waiting_for_wakeword');
+
+      // Should have 5 state changes total
+      assert.strictEqual(events.length, 5);
+    });
+  });
 });
