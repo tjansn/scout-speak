@@ -165,8 +165,14 @@ This document defines the complete implementation roadmap for Scout Phase 0 - a 
   - Orchestrates TTS, sentence chunking, and jitter buffer
   - Coordinates streaming pipeline components
 
+- T027: TTS to Playback Pipeline ✓
+  - src/tts/tts-playback-pipeline.mjs implementation
+  - Orchestrates StreamingTTS + JitterBuffer + AudioPlayback
+  - Playback loop reads frames from jitter buffer, writes to pacat
+  - Barge-in support via stop() method
+  - Events: speaking_started, speaking_complete, speaking_stopped, ready, underrun, error
+
 - T026: Audio Crossfade at Chunk Boundaries - PENDING
-- T027: TTS to Playback Pipeline - PENDING
 - T028: TTS Fallback to Text Display - PENDING
 
 **What Exists:**

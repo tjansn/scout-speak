@@ -20,6 +20,14 @@ import { splitIntoSentences } from './sentence-chunker.mjs';
 import { JitterBuffer } from './jitter-buffer.mjs';
 
 /**
+ * @typedef {Object} StreamingTTSStats
+ * @property {boolean} speaking - Whether currently speaking
+ * @property {number} currentSentence - Current sentence index
+ * @property {number} totalSentences - Total number of sentences
+ * @property {import('./jitter-buffer.mjs').JitterBufferStats} buffer - Jitter buffer stats
+ */
+
+/**
  * @typedef {Object} StreamingTTSConfig
  * @property {string} modelPath - Path to Piper .onnx voice model
  * @property {number} sampleRate - TTS output sample rate
@@ -238,14 +246,6 @@ export class StreamingTTS extends EventEmitter {
   isBufferReady() {
     return this._jitterBuffer.isReady;
   }
-
-  /**
-   * @typedef {Object} StreamingTTSStats
-   * @property {boolean} speaking - Whether currently speaking
-   * @property {number} currentSentence - Current sentence index
-   * @property {number} totalSentences - Total number of sentences
-   * @property {import('./jitter-buffer.mjs').JitterBufferStats} buffer - Jitter buffer stats
-   */
 
   /**
    * Get statistics
