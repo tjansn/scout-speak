@@ -240,6 +240,17 @@ This document defines the complete implementation roadmap for Scout Phase 0 - a 
   - Events: started, step_complete, connection_success, connection_failed, completed, cancelled
   - Full test coverage (18 tests)
 
+- T037: Setup Wizard - Audio Test ✓
+  - src/setup/audio-test.mjs implementation
+  - AudioTest class for microphone and speaker testing
+  - testMicrophone() records audio sample using AudioCapture
+  - testSpeaker() plays back recorded audio using AudioPlayback
+  - runFullTest() orchestrates complete audio hardware verification
+  - generateTestTone() creates test tones for speaker-only testing
+  - PulseAudio availability checking via ensurePulseAudio()
+  - Events: mic_test_started, mic_test_complete, speaker_test_started, speaker_test_complete, test_started, test_complete
+  - Full test coverage (26 tests) in tests/unit/setup/audio-test.test.mjs
+
 **What Exists:**
 - Discord voice bots (`voice/discord-voice-v6.mjs`) using CLOUD ElevenLabs STT/TTS and direct Anthropic API calls
 - Comprehensive specification documents in `specs/` (12 files, ~50KB)
