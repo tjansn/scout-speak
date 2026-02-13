@@ -6,7 +6,7 @@ This document defines the complete implementation roadmap for Scout Phase 0 - a 
 
 ### Current State Analysis (Verified 2026-02-13)
 
-**Project Status:** M3 COMPLETE. M4 IN PROGRESS.
+**Project Status:** M4 COMPLETE. M5 IN PROGRESS.
 
 **Plan Verification:** All 12 specification files reviewed. All 51 tasks verified against specs. Priority order confirmed correct per backpressure.md. No blocking gaps identified.
 
@@ -135,7 +135,7 @@ This document defines the complete implementation roadmap for Scout Phase 0 - a 
   - Depends on T029 (Session Manager) in M5
   - Will implement session ID capture and reuse
 
-**M4: Speech Synthesis (TTS, Jitter Buffer) - IN PROGRESS (2026-02-13)**
+**M4: Speech Synthesis (TTS, Jitter Buffer) - COMPLETE (2026-02-13)**
 - T022: Piper TTS Installation ✓
   - Documentation and setup provided in specs/tts_piper.md
   - pip install piper-tts documented
@@ -172,8 +172,24 @@ This document defines the complete implementation roadmap for Scout Phase 0 - a 
   - Barge-in support via stop() method
   - Events: speaking_started, speaking_complete, speaking_stopped, ready, underrun, error
 
-- T026: Audio Crossfade at Chunk Boundaries - PENDING
-- T028: TTS Fallback to Text Display - PENDING
+- T026: Audio Crossfade at Chunk Boundaries - PENDING (P2, deferred)
+- T028: TTS Fallback to Text Display - PENDING (P2, deferred)
+
+**M5: Session Management & Barge-in - IN PROGRESS (2026-02-13)**
+- T029: Session Manager Implementation ✓
+  - src/session/session-manager.mjs implementation
+  - tests/unit/session/session-manager.test.mjs comprehensive unit tests
+  - Central orchestrator for voice conversations
+  - Coordinates SpeechPipeline, OpenClawClient, TtsPlaybackPipeline, ConnectionMonitor
+  - State machine: idle -> listening -> processing -> speaking -> listening (loop)
+  - Barge-in support via speech detection during playback
+  - Events: state_changed, transcript, response, speaking_started, speaking_complete, barge_in, error
+
+- T030: Barge-in Detection - PENDING
+- T031: Barge-in Stops TTS and Playback - PENDING
+- T032: Barge-in Cooldown (Debounce) - PENDING
+- T033: Continuous Conversation Loop - PENDING
+- T034: Session Start/Stop Controls - PENDING
 
 **What Exists:**
 - Discord voice bots (`voice/discord-voice-v6.mjs`) using CLOUD ElevenLabs STT/TTS and direct Anthropic API calls
