@@ -18,19 +18,14 @@
 
 ### I1: OpenClaw Gateway API (from A1)
 
-**Status:** Needs device testing
+**Status:** ✅ RESOLVED — See `specs/openclaw_api.md`
 
-**To do:**
-1. SSH to Saga device
-2. Check OpenClaw docs or source if available
-3. Test actual gateway endpoints:
-   ```bash
-   curl http://localhost:18789/health
-   curl -X POST http://localhost:18789/...
-   ```
-4. Document actual request/response format
-
-**Blocks:** OpenClaw Client implementation
+**Findings:**
+- Gateway is WebSocket-based (ws://localhost:18789), not HTTP
+- Use CLI: `openclaw agent --agent main --message "text" --json`
+- Response: `result.payloads[0].text` contains agent response
+- Latency: ~2-3 seconds for short responses
+- Must start gateway manually: `openclaw gateway run --port 18789`
 
 ---
 

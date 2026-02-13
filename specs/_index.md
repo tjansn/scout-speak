@@ -18,6 +18,7 @@ This file is the table of contents for all documents in `specs/`, organized by c
 
 - [`techstack_and_frameworks.md`](./techstack_and_frameworks.md)
 - [`algorithm_and_data_structures.md`](./algorithm_and_data_structures.md)
+- [`openclaw_api.md`](./openclaw_api.md)
 
 ### Backpressure
 - [`backpressure.md`](./backpressure.md)

@@ -61,10 +61,12 @@ Scout is an **I/O layer** around OpenClaw. It handles audio capture, speech reco
 - Output: transcribed text string
 
 ### OpenClaw Client
-- Sends user transcript to OpenClaw gateway
-- Receives agent text response
+- Sends user transcript to OpenClaw via CLI: `openclaw agent --agent main --message "text" --json`
+- Parses JSON response: `result.payloads[0].text`
+- Gateway must be running: `openclaw gateway run --port 18789`
 - Handles connection errors, timeouts, retries
 - Never generates fallback responses
+- See `specs/openclaw_api.md` for full protocol documentation
 
 ### Text-to-Speech (TTS)
 - Converts agent text to audio
