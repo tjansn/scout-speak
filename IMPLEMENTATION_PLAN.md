@@ -230,6 +230,16 @@ This document defines the complete implementation roadmap for Scout Phase 0 - a 
   - Helper functions: isFirstRun(), checkFirstRun()
   - Full test coverage (32 tests)
 
+- T036: Setup Wizard - Gateway Configuration ✓
+  - src/setup/setup-wizard.mjs implementation
+  - SetupWizard class with interactive CLI wizard
+  - Prompts for gateway URL (validates localhost-only)
+  - Prompts for gateway token
+  - Tests connection via OpenClawClient.healthCheck()
+  - saveWizardConfig() creates config file with defaults
+  - Events: started, step_complete, connection_success, connection_failed, completed, cancelled
+  - Full test coverage (18 tests)
+
 **What Exists:**
 - Discord voice bots (`voice/discord-voice-v6.mjs`) using CLOUD ElevenLabs STT/TTS and direct Anthropic API calls
 - Comprehensive specification documents in `specs/` (12 files, ~50KB)
