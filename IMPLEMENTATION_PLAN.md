@@ -267,6 +267,21 @@ This document defines the complete implementation roadmap for Scout Phase 0 - a 
   - Error history tracking with getErrorHistory(), getErrorsByType()
   - Full test coverage (55 tests) in tests/unit/errors/error-messages.test.mjs
 
+- T039: Connection Lost Recovery ✓
+  - src/openclaw/connection-recovery.mjs implementation
+  - ConnectionRecovery class for automatic reconnection with exponential backoff
+  - Deterministic retry policy documented:
+    - Initial delay: 1000ms
+    - Multiplier: 2x (1s, 2s, 4s, 5s max)
+    - Maximum delay: 5000ms (per PRD NFR Reliability)
+    - Maximum attempts: 10 (~30s total recovery window)
+  - calculateBackoffDelay() for exponential backoff calculation
+  - getBackoffSchedule() returns full schedule for transparency
+  - calculateMaxRecoveryTime() calculates worst-case recovery time
+  - Events: recovery_started, attempt, attempt_failed, recovered, recovery_failed, recovery_cancelled
+  - Brief disconnections (<5s) do not crash session per PRD NFR Reliability
+  - Full test coverage (36 tests) in tests/unit/openclaw/connection-recovery.test.mjs
+
 **What Exists:**
 - Discord voice bots (`voice/discord-voice-v6.mjs`) using CLOUD ElevenLabs STT/TTS and direct Anthropic API calls
 - Comprehensive specification documents in `specs/` (12 files, ~50KB)
