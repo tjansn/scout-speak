@@ -6,7 +6,7 @@ This document defines the complete implementation roadmap for Scout Phase 0 - a 
 
 ### Current State Analysis (Verified 2026-02-13)
 
-**Project Status:** M0 COMPLETE. M1 implementation NOT STARTED.
+**Project Status:** M1 COMPLETE. M2 implementation NOT STARTED.
 
 **Plan Verification:** All 12 specification files reviewed. All 51 tasks verified against specs. Priority order confirmed correct per backpressure.md. No blocking gaps identified.
 
@@ -36,6 +36,45 @@ This document defines the complete implementation roadmap for Scout Phase 0 - a 
   - OpenClaw communication feature file created
   - Step definitions and World implemented
   - All acceptance tests passing
+
+**M1: Core Data Structures & Audio I/O - COMPLETE (2026-02-13)**
+- T005: AudioBuffer (Ring Buffer) ✓
+  - O(1) read/write ring buffer implementation
+  - Watermark support for jitter buffer
+  - msToSamples/samplesToMs utilities
+
+- T006: Config Schema and Validation ✓
+  - Complete config schema with JSDoc types
+  - Validation rules for all fields
+  - Load/save config functions
+  - Localhost-only gateway URL enforcement
+
+- T007: ConversationState Data Structure ✓
+  - State machine with valid transitions
+  - Events: stateChange, error, connectionChange
+  - Methods: startListening, startProcessing, startSpeaking, bargeIn
+
+- T008: VADState Data Structure ✓
+  - Speech probability threshold handling
+  - Silence duration tracking
+  - Minimum speech duration filtering
+  - Barge-in mode with elevated threshold
+
+- T009: PulseAudio Availability Check ✓
+  - isPulseAudioRunning check
+  - startPulseAudio function
+  - ensurePulseAudio with error handling
+  - Tool availability checks
+
+- T010: Audio Capture Module (parecord) ✓
+  - parecord process spawning
+  - Chunk-based audio streaming
+  - Event-based interface
+
+- T011: Audio Playback Module (pacat) ✓
+  - pacat process spawning
+  - Write with backpressure handling
+  - Immediate stop for barge-in
 
 **What Exists:**
 - Discord voice bots (`voice/discord-voice-v6.mjs`) using CLOUD ElevenLabs STT/TTS and direct Anthropic API calls
