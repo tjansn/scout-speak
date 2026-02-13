@@ -296,6 +296,17 @@ This document defines the complete implementation roadmap for Scout Phase 0 - a 
   - Events: loaded, saved, backup_created, backup_restored, corruption_detected, error
   - Full test coverage (37 tests) in tests/unit/config/config-persistence.test.mjs
 
+- T041: Logging System ✓
+  - src/utils/logger.mjs implementation
+  - Logger class with level filtering (debug, info, warn, error)
+  - File logging support with automatic directory creation
+  - Colored console output (ANSI codes)
+  - Component child loggers for module-specific logging
+  - Global singleton pattern with configure/resetGlobal methods
+  - createLoggerFromConfig() for Scout config integration
+  - getLogger() convenience function for component loggers
+  - Full test coverage (21 tests) in tests/unit/utils/logger.test.mjs
+
 **What Exists:**
 - Discord voice bots (`voice/discord-voice-v6.mjs`) using CLOUD ElevenLabs STT/TTS and direct Anthropic API calls
 - Comprehensive specification documents in `specs/` (12 files, ~50KB)
