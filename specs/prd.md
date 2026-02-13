@@ -114,11 +114,23 @@ A developer or power user who:
 
 22. As a tinkerer, I want a clear error message when something goes wrong so that I can fix it myself.
 
+### Wake Word (Optional)
+
+23. As a tinkerer, I want to optionally enable a wake word so that I can start talking without touching my phone.
+
+24. As a tinkerer, I want wake word to be off by default so that my phone isn't always listening when I don't want it to.
+
+### Display Preferences
+
+25. As a tinkerer, I want to choose how much text is shown on screen so that I can use voice-only, see minimal feedback, or have a full transcript.
+
+26. As a tinkerer, I want my display preference to persist so that I don't have to reconfigure it every time.
+
 ### Sharing / Community
 
-23. As a tinkerer, I want a README that explains setup completely so that I can send it to friends.
+27. As a tinkerer, I want a README that explains setup completely so that I can send it to friends.
 
-24. As a tinkerer, I want the install to work on most modern Android phones so that I'm not locked to one device.
+28. As a tinkerer, I want the install to work on most modern Android phones so that I'm not locked to one device.
 
 ---
 
@@ -208,6 +220,21 @@ The app must show clear error messages when something fails.
 The app must remember gateway configuration across restarts.
 
 **Acceptance:** Given the user has completed setup, when they restart the app, then their gateway URL/token is preserved.
+
+### FR-11: Optional Wake Word
+The app must support an optional wake word for hands-free activation.
+
+**Acceptance:** Given wake word is enabled in settings, when the user says the wake phrase, then Scout begins listening. Given wake word is disabled (default), then Scout only listens when manually activated.
+
+### FR-12: Configurable Display Mode
+The app must let the user choose how conversation is displayed.
+
+**Acceptance:** Given the settings screen, when the user selects a display mode (voice-only / minimal / full transcript), then the main screen reflects that choice. The preference persists across restarts.
+
+### FR-13: Transport Priority
+When multiple transports are active, the most recently used one receives responses.
+
+**Acceptance:** Given Scout and Discord are both connected to OpenClaw, when the user speaks via Scout, then Scout receives the response (not Discord). If they then use Discord, Discord receives subsequent responses.
 
 ---
 
@@ -329,6 +356,10 @@ The app must remember gateway configuration across restarts.
 | Agent runtime | OpenClaw gateway | Non-negotiable constraint | projectBrief |
 | Phase 0 platform | Termux (Node.js) | Rapid iteration, no Android Studio | projectBrief |
 | Audio I/O (Phase 0) | termux-microphone-record + pulseaudio | Available in Termux environment | projectBrief |
+| OpenClaw connectivity | Localhost only | Simplest, most secure; remote support can be added later | User decision |
+| Multi-transport priority | Most recent wins | Whichever transport (Discord/Scout) was used last gets responses | User decision |
+| Wake word | Optional, off by default | Hands-free activation available but not required; saves battery | User decision |
+| History display | Configurable | User chooses voice-only, minimal text, or full transcript | User decision |
 
 ---
 
@@ -396,50 +427,16 @@ The app must remember gateway configuration across restarts.
 
 ---
 
-## 15. Open Questions
+## 15. Resolved Questions
 
-### OQ-1: Remote OpenClaw Support
-Should Scout support connecting to OpenClaw running on a different device (e.g., home server)?
+All questions have been resolved:
 
-**Options:**
-- (A) Localhost only — simplest, most secure
-- (B) LAN discovery — find OpenClaw on local network
-- (C) Manual IP/URL entry — flexible but more setup
-- (D) Defer to later phase
-
-**Current assumption:** Localhost only (A) for Phase 0.
-
-### OQ-2: Multiple Active Transports
-If Discord and Scout are both connected to the same OpenClaw, how should they coexist?
-
-**Options:**
-- (A) Both receive all responses (broadcast)
-- (B) Most recent transport gets priority
-- (C) OpenClaw decides (session arbitration)
-- (D) Defer to later phase
-
-**Current assumption:** Defer to Phase 3 (D).
-
-### OQ-3: Wake Word
-Should Scout support hands-free activation with a wake word?
-
-**Options:**
-- (A) No wake word — user must open app or tap to start
-- (B) Optional wake word — configurable
-- (C) Required wake word — always listening
-
-**Current assumption:** No wake word (A) for Phase 0; app must be open.
-
-### OQ-4: Conversation History Display
-Should Scout show a text transcript of the conversation?
-
-**Options:**
-- (A) Voice only — no text shown
-- (B) Minimal text — current turn only
-- (C) Full transcript — scrollable history
-- (D) Configurable
-
-**Current assumption:** Minimal text (B) — shows what was heard and response.
+| Question | Decision | Rationale |
+|----------|----------|-----------|
+| **Remote OpenClaw** | Localhost only | Simplest, most secure; Scout connects to OpenClaw on same device |
+| **Multiple transports** | Most recent wins | If Discord and Scout both active, whichever was used last gets priority |
+| **Wake word** | Optional (off by default) | Can be enabled for hands-free activation; off by default to save battery |
+| **History display** | Configurable | User chooses: voice-only, minimal text, or full transcript |
 
 ---
 
