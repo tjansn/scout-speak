@@ -1,0 +1,50 @@
+#!/bin/sh
+
+# Scout pre-commit hook
+# Runs linter, typechecks, and secret detection before each commit
+# Per backpressure.md requirement: quality gates must be in place
+
+echo "🔍 Running pre-commit checks..."
+
+# Run ESLint
+echo "→ Linting..."
+npm run lint
+if [ $? -ne 0 ]; then
+  echo "❌ Lint failed. Please fix errors before committing."
+  exit 1
+fi
+
+# Run TypeScript typecheck
+echo "→ Type checking..."
+npm run typecheck
+if [ $? -ne 0 ]; then
+  echo "❌ Typecheck failed. Please fix type errors before committing."
+  exit 1
+fi
+
+# Run unit tests
+echo "→ Running unit tests..."
+npm run test:unit
+if [ $? -ne 0 ]; then
+  echo "❌ Unit tests failed. Please fix failing tests before committing."
+  exit 1
+fi
+
+# Check for secrets (patterns that shouldn't be committed)
+echo "→ Checking for secrets..."
+SECRET_PATTERNS='(password|secret|api[_-]?key|token|private[_-]?key|credentials)[[:space:]]*[:=][[:space:]]*["\x27][^"\x27]{8,}'
+
+# Check staged files for secret patterns
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(mjs|js|ts|json)$' | grep -v 'package-lock.json' | grep -v 'config.json.example')
+
+for FILE in $STAGED_FILES; do
+  if [ -f "$FILE" ]; then
+    if grep -iE "$SECRET_PATTERNS" "$FILE" > /dev/null 2>&1; then
+      echo "❌ Potential secret found in: $FILE"
+      echo "   Please remove hardcoded secrets before committing."
+      exit 1
+    fi
+  fi
+done
+
+echo "✅ All pre-commit checks passed!"

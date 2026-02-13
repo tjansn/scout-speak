@@ -1,2 +1,55 @@
+# OS files
 .DS_Store
+Thumbs.db
+
+# IDE/Editor
 .claude/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+credentials.json
+secrets.json
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Models (large binary files - download separately)
+models/
+*.onnx
+*.bin
+
+# Audio recordings (test artifacts)
+*.wav
+*.pcm
+*.raw
+
+# Config with secrets (use config.json.example as template)
+config.json

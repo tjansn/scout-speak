@@ -1,0 +1,26 @@
+{
+  "gateway_url": "http://localhost:18789",
+  "gateway_token": "YOUR_GATEWAY_TOKEN_HERE",
+
+  "stt_model_path": "/path/to/whisper.cpp/models/ggml-tiny.en.bin",
+  "tts_voice": "en_US-lessac-medium",
+  "tts_model_path": "/path/to/piper/voices/en_US-lessac-medium.onnx",
+  "tts_sample_rate": 22050,
+  "vad_model_path": "/path/to/silero_vad.onnx",
+
+  "sample_rate": 16000,
+  "vad_threshold": 0.5,
+  "silence_duration_ms": 1200,
+  "min_speech_ms": 500,
+  "buffer_size_ms": 500,
+  "low_watermark_ms": 100,
+
+  "wake_word_enabled": false,
+  "wake_word_phrase": "hey scout",
+  "display_mode": "minimal",
+  "barge_in_enabled": true,
+  "barge_in_cooldown_ms": 200,
+
+  "log_level": "info",
+  "log_to_file": false
+}

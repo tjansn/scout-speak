@@ -1,0 +1,45 @@
+{
+  "name": "scout",
+  "version": "0.0.0",
+  "description": "Local-first voice interface for OpenClaw AI agents on Android/Termux",
+  "type": "module",
+  "main": "src/index.mjs",
+  "scripts": {
+    "start": "node src/index.mjs",
+    "lint": "eslint src tests --ext .mjs,.js",
+    "lint:fix": "eslint src tests --ext .mjs,.js --fix",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test tests/unit/**/*.test.mjs",
+    "test:unit": "node --test tests/unit/**/*.test.mjs",
+    "test:integration": "node --test tests/integration/**/*.test.mjs",
+    "test:acceptance": "cucumber-js tests/acceptance",
+    "test:all": "npm run test:unit && npm run test:integration && npm run test:acceptance",
+    "precommit": "npm run lint && npm run typecheck && npm run test:unit",
+    "prepare": "husky"
+  },
+  "keywords": [
+    "voice",
+    "openclaw",
+    "ai",
+    "speech-to-text",
+    "text-to-speech",
+    "termux",
+    "android"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "devDependencies": {
+    "@cucumber/cucumber": "^11.2.0",
+    "@types/node": "^22.13.4",
+    "eslint": "^9.20.1",
+    "gitleaks": "^1.0.0",
+    "husky": "^9.1.7",
+    "typescript": "^5.7.3"
+  },
+  "dependencies": {
+    "onnxruntime-node": "^1.20.1"
+  }
+}
