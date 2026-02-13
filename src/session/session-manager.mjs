@@ -40,6 +40,10 @@ import { WakeWordDetector } from '../wakeword/wake-word-detector.mjs';
  */
 
 /**
+ * @typedef {'voice_only' | 'minimal' | 'transcript'} DisplayMode
+ */
+
+/**
  * @typedef {Object} SessionManagerConfig
  * @property {string} vadModelPath - Path to Silero VAD ONNX model
  * @property {string} whisperPath - Path to whisper.cpp executable
@@ -62,6 +66,7 @@ import { WakeWordDetector } from '../wakeword/wake-word-detector.mjs';
  * @property {number} [bargeInCooldownMs=200] - Barge-in cooldown/debounce period
  * @property {boolean} [wakeWordEnabled=false] - Whether wake word detection is enabled (FR-11)
  * @property {string} [wakeWordPhrase='hey scout'] - Wake word phrase to listen for (FR-11)
+ * @property {DisplayMode} [displayMode='minimal'] - Display mode for console output (FR-12)
  */
 
 /**
@@ -82,7 +87,8 @@ export const DEFAULT_SESSION_CONFIG = Object.freeze({
   bargeInCooldownMs: 200,
   persistSession: true,
   wakeWordEnabled: false,
-  wakeWordPhrase: 'hey scout'
+  wakeWordPhrase: 'hey scout',
+  displayMode: 'minimal'
 });
 
 /**
@@ -830,6 +836,37 @@ export class SessionManager extends EventEmitter {
   setWakeWordPhrase(phrase) {
     this._wakeWordDetector.setWakePhrase(phrase);
     this.emit('wake_word_phrase_changed', { phrase });
+  }
+
+  /**
+   * Get the current display mode (FR-12)
+   * @returns {DisplayMode}
+   */
+  get displayMode() {
+    return this._config.displayMode ?? 'minimal';
+  }
+
+  /**
+   * Set the display mode (FR-12)
+   *
+   * Per FR-12: Mode changes take effect immediately.
+   * This updates the config but does not persist it - use ConfigPersistence
+   * for persistence across restarts.
+   *
+   * @param {DisplayMode} mode - New display mode ('voice_only' | 'minimal' | 'transcript')
+   */
+  setDisplayMode(mode) {
+    const validModes = ['voice_only', 'minimal', 'transcript'];
+    if (!validModes.includes(mode)) {
+      throw new Error(`Invalid display mode: ${mode}. Must be one of: ${validModes.join(', ')}`);
+    }
+
+    const previousMode = this._config.displayMode;
+    this._config.displayMode = mode;
+
+    if (previousMode !== mode) {
+      this.emit('display_mode_changed', { from: previousMode, to: mode });
+    }
   }
 
   /**

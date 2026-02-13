@@ -221,7 +221,7 @@ This document defines the complete implementation roadmap for Scout Phase 0 - a 
   - isPaused getter and paused status in getStats()
   - Full test coverage in tests/unit/session/session-manager.test.mjs
 
-**M6: First-Run Setup, Error Handling & Features - IN PROGRESS (2026-02-13)**
+**M6: First-Run Setup, Error Handling & Features - IN PROGRESS (2026-02-13) [8/10 tasks complete]**
 - T035: First-Run Detection ✓
   - src/config/first-run.mjs implementation
   - FirstRunDetector class with check() method
@@ -1786,10 +1786,26 @@ idle -> listening -> processing -> speaking -> listening -> ...
 
 ---
 
-### T043: Display Mode Configuration (FR-12)
+### T043: Display Mode Configuration (FR-12) ✓
 **Priority:** P2
 **Dependencies:** T006, T029
 **Description:** Implement configurable display modes per `prd.md` FR-12.
+
+**Implementation:**
+- `src/ui/display-formatter.mjs` implementation
+  - DisplayFormatter class with mode-specific formatting
+  - Formats user speech, agent responses, and status based on display mode
+  - voice_only: Icon-only display (status icons, no text)
+  - minimal: Text status only (Listening/Processing/Speaking)
+  - transcript: Full conversation history with user/agent messages
+- `src/ui/console-ui.mjs` implementation
+  - ConsoleUI class for terminal output
+  - Integrates with DisplayFormatter for mode-aware rendering
+  - Events: display_updated, mode_changed
+- SessionManager `display_mode` config field support
+- Display mode persistence via config (survives restarts)
+- Full test coverage in `tests/unit/ui/display-formatter.test.mjs`
+- Full test coverage in `tests/unit/ui/console-ui.test.mjs`
 
 **Specification Reference:** `prd.md` FR-12
 - Display modes: voice_only, minimal, transcript
@@ -1806,15 +1822,15 @@ idle -> listening -> processing -> speaking -> listening -> ...
 - `display_mode`: "voice_only" | "minimal" | "transcript"
 
 **Acceptance Criteria:**
-- [ ] FR-12: Settings allow selecting display mode
-- [ ] FR-12: Main screen reflects choice
-- [ ] Preference persists across restarts
-- [ ] Mode changes take effect immediately
+- [x] FR-12: Settings allow selecting display mode
+- [x] FR-12: Main screen reflects choice
+- [x] Preference persists across restarts
+- [x] Mode changes take effect immediately
 
 **Test Requirements:**
-- Unit test: display mode rendering logic
-- Integration test: mode persistence
-- Manual test: visual verification for each mode
+- [x] Unit test: display mode rendering logic
+- [x] Integration test: mode persistence
+- [x] Manual test: visual verification for each mode
 
 ---
 
