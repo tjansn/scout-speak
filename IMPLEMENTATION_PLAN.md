@@ -251,6 +251,22 @@ This document defines the complete implementation roadmap for Scout Phase 0 - a 
   - Events: mic_test_started, mic_test_complete, speaker_test_started, speaker_test_complete, test_started, test_complete
   - Full test coverage (26 tests) in tests/unit/setup/audio-test.test.mjs
 
+- T038: Error Message System ✓
+  - src/errors/error-messages.mjs implementation
+  - ErrorCode enum with all failure scenario codes
+  - ErrorMessageHandler class for centralized error handling
+  - User-friendly error messages for all scenarios per PRD FR-9:
+    - "Cannot reach OpenClaw" for gateway unreachable
+    - "Didn't catch that" for STT empty/garbage
+    - "Connection lost" for network drops
+    - "Text-to-speech failed" with text fallback suggestion
+    - "Microphone access denied" with permission explanation
+  - Each error includes actionable suggestions for tinkerers
+  - isRecoverable() to distinguish transient vs fatal errors
+  - formatErrorForDisplay() for consistent output formatting
+  - Error history tracking with getErrorHistory(), getErrorsByType()
+  - Full test coverage (55 tests) in tests/unit/errors/error-messages.test.mjs
+
 **What Exists:**
 - Discord voice bots (`voice/discord-voice-v6.mjs`) using CLOUD ElevenLabs STT/TTS and direct Anthropic API calls
 - Comprehensive specification documents in `specs/` (12 files, ~50KB)
