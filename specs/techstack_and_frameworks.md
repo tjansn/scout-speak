@@ -66,8 +66,8 @@ This stack prioritizes local operation, hackability, and rapid iteration over SS
 
 | Option | Pros | Cons | Decision |
 |--------|------|------|----------|
-| **termux-microphone-record + pulseaudio** | Available in Termux, no native code | Higher latency than AAudio | **Chosen for Phase 0** |
-| termux-api only | Simpler | Limited control | Alternative |
+| **parecord/pacat (PulseAudio)** | Raw PCM support, configurable format | Requires PulseAudio running | **Chosen for Phase 0** |
+| termux-microphone-record | Simple API | No raw PCM (only aac/opus/amr) | **Rejected** |
 | AAudio/Oboe | Lowest latency | Requires native Android | **Phase 1** |
 
 ---
@@ -83,8 +83,8 @@ This stack prioritizes local operation, hackability, and rapid iteration over SS
 | VAD | Silero VAD v4 | Proven, fast, accurate | ONNX dependency | FR-6 (barge-in) |
 | Runtime | Node.js 25.x | Available in Termux, async I/O | Not native performance | Phase 0 scope |
 | Agent API | OpenClaw HTTP | Non-negotiable | None | FR-3 |
-| Audio capture | termux-microphone-record | Works in Termux | Higher latency | FR-1 |
-| Audio playback | pulseaudio (pacat) | Works in Termux | Higher latency | FR-5 |
+| Audio capture | parecord (PulseAudio) | Raw PCM support | Requires PulseAudio daemon | FR-1 |
+| Audio playback | pacat (PulseAudio) | Raw PCM support, matches capture | Requires PulseAudio daemon | FR-5 |
 | Config format | JSON | Simple, Node.js native | No schema validation | FR-10 |
 | Logging | Console + file | Simple, debuggable | No structured logging | User story #14 |
 

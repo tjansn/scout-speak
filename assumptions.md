@@ -31,33 +31,33 @@
 
 ### I2: termux-microphone-record Format (from A4)
 
-**Status:** Needs device testing
+**Status:** ✅ RESOLVED
 
-**To do:**
-1. SSH to Saga device
-2. Test `termux-microphone-record` flags:
-   ```bash
-   termux-microphone-record -h
-   termux-microphone-record -f wav -l 3 test.wav
-   file test.wav
-   ```
-3. If no raw PCM support, test `parecord` as alternative
-4. Document working command and format
-
-**Blocks:** Audio Capture implementation
+**Findings:**
+- `termux-microphone-record` does NOT support raw PCM — only encoded formats (aac, opus, amr_wb, amr_nb)
+- **Use `parecord` (PulseAudio) instead:**
+  ```bash
+  parecord --raw --format=s16le --rate=16000 --channels=1 output.pcm
+  ```
+- Tested on device: produces correct 16kHz mono 16-bit PCM
+- Playback with: `pacat --raw --format=s16le --rate=16000 --channels=1 output.pcm`
+- Requires PulseAudio running: `pulseaudio --start`
 
 ---
 
 ### I3: Piper TTS Streaming (from A6)
 
-**Status:** Needs verification
+**Status:** ✅ RESOLVED
 
-**To do:**
-1. Check Piper documentation for streaming output
-2. Test if `piper` CLI can pipe output incrementally
-3. If not native streaming, implement sentence-chunking:
-   - Split response into sentences
-   - Synthesize each sentence
-   - Start playback after first sentence ready
+**Findings:**
+- Piper supports streaming with `--output_raw` flag
+- Command: `echo "text" | piper -m voice.onnx --output_raw | pacat --raw -r 22050 -c 1 -f S16_LE`
+- Streaming is **sentence-by-sentence** (not word-by-word)
+- Output format: raw S16_LE PCM at voice model's sample rate (typically 22050Hz)
+- **Important:** Keep Piper process alive to avoid 14+ second startup latency
+- Not yet installed on device — needs `pip install piper-tts`
 
-**Blocks:** TTS implementation, latency targets
+**Implementation approach:**
+1. Start Piper as long-running process (avoid cold start per utterance)
+2. Pipe text in, stream raw PCM out
+3. May need sample rate conversion (22050 → device playback rate)
