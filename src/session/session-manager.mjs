@@ -28,6 +28,7 @@
 
 import { EventEmitter } from 'events';
 import { ConversationState } from './conversation-state.mjs';
+import { SessionPersistence } from './session-persistence.mjs';
 import { SpeechPipeline } from '../stt/speech-pipeline.mjs';
 import { OpenClawClient } from '../openclaw/openclaw-client.mjs';
 import { ConnectionMonitor } from '../openclaw/connection-monitor.mjs';
@@ -45,6 +46,8 @@ import { TtsPlaybackPipeline } from '../tts/tts-playback-pipeline.mjs';
  * @property {string} ttsModelPath - Path to Piper .onnx voice model
  * @property {string} gateway_url - OpenClaw gateway URL
  * @property {string} [gateway_token] - OpenClaw gateway token
+ * @property {string} [configPath] - Path to config file for session persistence (T050)
+ * @property {boolean} [persistSession=true] - Whether to persist session ID across restarts (T050)
  * @property {number} [sampleRate=16000] - Capture sample rate
  * @property {number} [ttsSampleRate=22050] - TTS sample rate
  * @property {number} [vadThreshold=0.5] - VAD speech threshold
@@ -73,7 +76,8 @@ export const DEFAULT_SESSION_CONFIG = Object.freeze({
   lowWatermarkMs: 100,
   connectionPollMs: 5000,
   bargeInEnabled: true,
-  bargeInCooldownMs: 200
+  bargeInCooldownMs: 200,
+  persistSession: true
 });
 
 /**
@@ -134,6 +138,15 @@ export class SessionManager extends EventEmitter {
     /** @type {number} - Timestamp of last barge-in for cooldown */
     this._lastBargeInTime = 0;
 
+    /** @type {SessionPersistence|null} - Session persistence for reconnect/resume (T050) */
+    this._sessionPersistence = null;
+    if (this._config.persistSession && this._config.configPath) {
+      this._sessionPersistence = new SessionPersistence({
+        configPath: this._config.configPath,
+        autoSave: true
+      });
+    }
+
     this._setupStateEvents();
     this._setupConnectionEvents();
   }
@@ -192,6 +205,15 @@ export class SessionManager extends EventEmitter {
   async init() {
     if (this._initialized) {
       return;
+    }
+
+    // Initialize session persistence and restore previous session ID (T050)
+    if (this._sessionPersistence) {
+      const restoredSessionId = await this._sessionPersistence.init();
+      if (restoredSessionId) {
+        this._state.setSessionId(restoredSessionId);
+        this.emit('session_restored', { sessionId: restoredSessionId });
+      }
     }
 
     // Create and initialize speech pipeline
@@ -520,9 +542,15 @@ export class SessionManager extends EventEmitter {
       // Emit response event
       this.emit('response', { text: response.text, sessionId: response.sessionId });
 
-      // Update session ID
+      // Update session ID and persist for reconnect/resume (T050)
       if (response.sessionId) {
         this._state.setSessionId(response.sessionId);
+        // Persist session ID asynchronously (don't block response flow)
+        if (this._sessionPersistence) {
+          this._sessionPersistence.setSessionId(response.sessionId).catch((err) => {
+            this.emit('error', { type: 'session_persistence', message: err.message });
+          });
+        }
       }
 
       // Transition to speaking and start TTS
@@ -591,6 +619,35 @@ export class SessionManager extends EventEmitter {
       const message = err instanceof Error ? err.message : String(err);
       this.emit('error', { type: 'tts_speak', message });
     }
+  }
+
+  /**
+   * Reset the session - clears session ID for a fresh conversation (T050)
+   *
+   * Per T050: Reset session ID when user intentionally starts a new session.
+   * This clears both in-memory and persisted session ID.
+   *
+   * @returns {Promise<void>}
+   */
+  async resetSession() {
+    // Clear in-memory session ID
+    this._state.setSessionId(null);
+    this._openclawClient.resetSession();
+
+    // Clear persisted session ID
+    if (this._sessionPersistence) {
+      await this._sessionPersistence.reset();
+    }
+
+    this.emit('session_reset');
+  }
+
+  /**
+   * Get the current session ID
+   * @returns {string|null}
+   */
+  get sessionId() {
+    return this._state.sessionId;
   }
 
   /**

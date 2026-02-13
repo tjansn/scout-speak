@@ -131,9 +131,13 @@ This document defines the complete implementation roadmap for Scout Phase 0 - a 
   - No fallback text generation paths
   - All error cases propagate to error handlers
 
-- T050: Session Strategy & Identity Continuity - PENDING
-  - Depends on T029 (Session Manager) in M5
-  - Will implement session ID capture and reuse
+- T050: Session Strategy & Identity Continuity ✓
+  - src/session/session-persistence.mjs implementation
+  - Integration with SessionManager to restore session ID on init
+  - Auto-save session ID to config on successful OpenClaw response
+  - resetSession() method for user-initiated session reset
+  - last_session_id config field added
+  - Comprehensive unit tests in tests/unit/session/session-persistence.test.mjs
 
 **M4: Speech Synthesis (TTS, Jitter Buffer) - COMPLETE (2026-02-13)**
 - T022: Piper TTS Installation ✓
@@ -1041,10 +1045,18 @@ openclaw gateway health
 
 ---
 
-### T050: Session Strategy & Identity Continuity
+### T050: Session Strategy & Identity Continuity ✓ COMPLETE
 **Priority:** P1
 **Dependencies:** T018, T029
 **Description:** Define and implement explicit session ID strategy so Scout conversation continuity matches OpenClaw identity/memory expectations.
+
+**Implementation:**
+- `src/session/session-persistence.mjs` - SessionPersistence class
+- Integration with SessionManager to restore session ID on init
+- Auto-save session ID to config on successful OpenClaw response
+- `resetSession()` method for user-initiated session reset
+- `last_session_id` config field added for persistence
+- Comprehensive unit tests in `tests/unit/session/session-persistence.test.mjs`
 
 **Strategy:**
 - Capture `sessionId` from OpenClaw responses when provided
@@ -1053,15 +1065,15 @@ openclaw gateway health
 - Reset session ID when user intentionally starts a new session
 
 **Acceptance Criteria:**
-- [ ] Multi-turn conversation reuses OpenClaw session context by default
-- [ ] Session reset behavior is explicit and user-controlled
-- [ ] Session metadata handled without leaking sensitive values
+- [x] Multi-turn conversation reuses OpenClaw session context by default
+- [x] Session reset behavior is explicit and user-controlled
+- [x] Session metadata handled without leaking sensitive values
 
 **Test Requirements:**
-- Unit test: session ID extraction/parsing
-- Unit test: reuse vs reset logic
-- Integration test: identity/memory continuity across multiple turns
-- Integration test: reconnect resumes expected session behavior
+- [x] Unit test: session ID extraction/parsing
+- [x] Unit test: reuse vs reset logic
+- [x] Integration test: identity/memory continuity across multiple turns (simulated restarts)
+- [x] Integration test: reconnect resumes expected session behavior
 
 ---
 

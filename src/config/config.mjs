@@ -35,6 +35,7 @@ import { constants as fsConstants } from 'fs';
  * @property {number} barge_in_cooldown_ms - Barge-in debounce period
  * @property {string} log_level - Log level (debug|info|warn|error)
  * @property {boolean} log_to_file - Enable file logging
+ * @property {string} [last_session_id] - Last successful OpenClaw session ID (for reconnect/resume)
  */
 
 /**
@@ -66,7 +67,8 @@ export const DEFAULT_CONFIG = Object.freeze({
   barge_in_enabled: true,
   barge_in_cooldown_ms: 200,
   log_level: 'info',
-  log_to_file: false
+  log_to_file: false,
+  last_session_id: ''
 });
 
 /**
@@ -281,6 +283,11 @@ export async function validateConfig(config, options = {}) {
   // Log to file validation
   if (config.log_to_file !== undefined && typeof config.log_to_file !== 'boolean') {
     errors.push({ field: 'log_to_file', message: 'Log to file must be a boolean' });
+  }
+
+  // Last session ID validation (T050: Session persistence for reconnect/resume)
+  if (config.last_session_id !== undefined && typeof config.last_session_id !== 'string') {
+    errors.push({ field: 'last_session_id', message: 'Last session ID must be a string' });
   }
 
   return errors;
