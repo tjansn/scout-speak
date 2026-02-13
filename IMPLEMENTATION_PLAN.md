@@ -6,7 +6,7 @@ This document defines the complete implementation roadmap for Scout Phase 0 - a 
 
 ### Current State Analysis (Verified 2026-02-13)
 
-**Project Status:** M3 COMPLETE. M4 implementation NOT STARTED.
+**Project Status:** M3 COMPLETE. M4 IN PROGRESS.
 
 **Plan Verification:** All 12 specification files reviewed. All 51 tasks verified against specs. Priority order confirmed correct per backpressure.md. No blocking gaps identified.
 
@@ -134,6 +134,40 @@ This document defines the complete implementation roadmap for Scout Phase 0 - a 
 - T050: Session Strategy & Identity Continuity - PENDING
   - Depends on T029 (Session Manager) in M5
   - Will implement session ID capture and reuse
+
+**M4: Speech Synthesis (TTS, Jitter Buffer) - IN PROGRESS (2026-02-13)**
+- T022: Piper TTS Installation ✓
+  - Documentation and setup provided in specs/tts_piper.md
+  - pip install piper-tts documented
+  - Voice model download instructions included
+
+- T023: TTS Module (Piper wrapper) ✓
+  - src/tts/tts.mjs implementation
+  - Streaming audio synthesis via piper CLI
+  - Support for interruption (barge-in)
+  - Configurable sample rate
+
+- T024: Sentence Chunking for Streaming TTS ✓
+  - src/tts/sentence-chunker.mjs implementation
+  - Split text into sentences using punctuation
+  - Minimum chunk characters configurable
+  - Enables streaming playback
+
+- T025: Jitter Buffer Implementation ✓
+  - src/tts/jitter-buffer.mjs implementation
+  - Ring buffer with watermarks
+  - Silence padding on underrun
+  - Clear for barge-in support
+  - FR-5: Continuous audio with no cuts/glitches
+
+- Streaming TTS Orchestrator ✓
+  - src/tts/streaming-tts.mjs implementation
+  - Orchestrates TTS, sentence chunking, and jitter buffer
+  - Coordinates streaming pipeline components
+
+- T026: Audio Crossfade at Chunk Boundaries - PENDING
+- T027: TTS to Playback Pipeline - PENDING
+- T028: TTS Fallback to Text Display - PENDING
 
 **What Exists:**
 - Discord voice bots (`voice/discord-voice-v6.mjs`) using CLOUD ElevenLabs STT/TTS and direct Anthropic API calls
