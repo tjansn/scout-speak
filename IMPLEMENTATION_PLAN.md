@@ -6,7 +6,7 @@ This document defines the complete implementation roadmap for Scout Phase 0 - a 
 
 ### Current State Analysis (Verified 2026-02-13)
 
-**Project Status:** M2 COMPLETE. M3 implementation NOT STARTED.
+**Project Status:** M2 COMPLETE. M3 implementation IN PROGRESS (T018 complete).
 
 **Plan Verification:** All 12 specification files reviewed. All 51 tasks verified against specs. Priority order confirmed correct per backpressure.md. No blocking gaps identified.
 
@@ -106,6 +106,14 @@ This document defines the complete implementation roadmap for Scout Phase 0 - a 
   - src/stt/speech-pipeline.mjs implementation
   - Complete AudioCapture -> VAD -> STT pipeline
   - Event-based interface with proper state management
+
+**M3: OpenClaw Integration - IN PROGRESS**
+- T018: OpenClaw CLI Wrapper ✓
+  - src/openclaw/openclaw-client.mjs implementation
+  - CLI command construction via spawn
+  - Response parsing with error handling
+  - Gateway token via environment variable
+  - Events: sending, received, error, session_reset
 
 **What Exists:**
 - Discord voice bots (`voice/discord-voice-v6.mjs`) using CLOUD ElevenLabs STT/TTS and direct Anthropic API calls
