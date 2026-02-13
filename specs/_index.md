@@ -20,7 +20,9 @@ This file is the table of contents for all documents in `specs/`, organized by c
 - [`algorithm_and_data_structures.md`](./algorithm_and_data_structures.md)
 - [`openclaw_api.md`](./openclaw_api.md)
 - [`audio_io.md`](./audio_io.md)
+- [`stt_whisper.md`](./stt_whisper.md)
 - [`tts_piper.md`](./tts_piper.md)
+- [`vad_silero.md`](./vad_silero.md)
 
 ### Backpressure
 - [`backpressure.md`](./backpressure.md)
