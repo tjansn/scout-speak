@@ -6,7 +6,7 @@ This document defines the complete implementation roadmap for Scout Phase 0 - a 
 
 ### Current State Analysis (Verified 2026-02-13)
 
-**Project Status:** M2 COMPLETE. M3 implementation IN PROGRESS (T018 complete).
+**Project Status:** M3 COMPLETE. M4 implementation NOT STARTED.
 
 **Plan Verification:** All 12 specification files reviewed. All 51 tasks verified against specs. Priority order confirmed correct per backpressure.md. No blocking gaps identified.
 
@@ -107,13 +107,33 @@ This document defines the complete implementation roadmap for Scout Phase 0 - a 
   - Complete AudioCapture -> VAD -> STT pipeline
   - Event-based interface with proper state management
 
-**M3: OpenClaw Integration - IN PROGRESS**
+**M3: OpenClaw Integration - COMPLETE (2026-02-13)**
 - T018: OpenClaw CLI Wrapper ✓
   - src/openclaw/openclaw-client.mjs implementation
   - CLI command construction via spawn
   - Response parsing with error handling
   - Gateway token via environment variable
   - Events: sending, received, error, session_reset
+
+- T019: OpenClaw Health Check ✓
+  - Health check via `openclaw gateway health` command
+  - Boolean health status return
+  - Timeout handling
+
+- T020: Connection Status Monitoring ✓
+  - src/openclaw/connection-monitor.mjs implementation
+  - Periodic health check polling (configurable interval)
+  - ConversationState.openclaw_connected updates
+  - Events: connected, disconnected, error
+
+- T021: Never Fake Responses Enforcement ✓
+  - OpenClawClient returns null on any error
+  - No fallback text generation paths
+  - All error cases propagate to error handlers
+
+- T050: Session Strategy & Identity Continuity - PENDING
+  - Depends on T029 (Session Manager) in M5
+  - Will implement session ID capture and reuse
 
 **What Exists:**
 - Discord voice bots (`voice/discord-voice-v6.mjs`) using CLOUD ElevenLabs STT/TTS and direct Anthropic API calls
