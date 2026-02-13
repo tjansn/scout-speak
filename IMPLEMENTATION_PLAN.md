@@ -185,11 +185,33 @@ This document defines the complete implementation roadmap for Scout Phase 0 - a 
   - Barge-in support via speech detection during playback
   - Events: state_changed, transcript, response, speaking_started, speaking_complete, barge_in, error
 
-- T030: Barge-in Detection - PENDING
-- T031: Barge-in Stops TTS and Playback - PENDING
-- T032: Barge-in Cooldown (Debounce) - PENDING
-- T033: Continuous Conversation Loop - PENDING
-- T034: Session Start/Stop Controls - PENDING
+- T030: Barge-in Detection ✓
+  - VADProcessor handles barge-in mode with elevated threshold (0.5 -> 0.7)
+  - Requires 3+ consecutive speech frames for barge-in trigger
+  - SessionManager._handleBargeIn() coordinates stopping TTS and transitioning state
+  - Cooldown/debounce implemented via bargeInCooldownMs config (default 200ms)
+  - bargeInEnabled config option to toggle feature on/off
+  - Tests: barge-in event emission, TTS stopping, state transition, cooldown behavior
+
+- T031: Barge-in Stops TTS and Playback ✓
+  - TTS.stop() cancels pending synthesis via StreamingTTS.stop()
+  - JitterBuffer.clear() discards buffered audio via _stopPlayback()
+  - AudioPlayback.stop() stops output immediately
+  - State transitions to "listening"
+  - Tests: TTS cancellation, state transition
+
+- T032: Barge-in Cooldown (Debounce) ✓ (merged into T030)
+  - bargeInCooldownMs config (default 200ms) prevents rapid repeated interrupts
+  - _lastBargeInTime tracking in SessionManager
+  - Tests: cooldown within period ignored, cooldown expiration allows new barge-in
+
+- T033: Continuous Conversation Loop ✓
+  - speaking -> listening on playback complete (playbackComplete event)
+  - speaking -> listening on barge-in (bargeIn event)
+  - Loop continues until session ended
+  - Tests: multi-turn conversation integration test
+
+- T034: Session Start/Stop Controls - PENDING (P2)
 
 **What Exists:**
 - Discord voice bots (`voice/discord-voice-v6.mjs`) using CLOUD ElevenLabs STT/TTS and direct Anthropic API calls

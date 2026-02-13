@@ -601,6 +601,88 @@ describe('SessionManager', () => {
 
       assert.strictEqual(manager.status, 'listening');
     });
+
+    it('should respect barge-in cooldown', async () => {
+      let bargeInCount = 0;
+      manager.on('barge_in', () => { bargeInCount++; });
+
+      // Manually transition to speaking
+      manager._state.startListening();
+      manager._state.startProcessing('test');
+      manager._state.startSpeaking('response');
+
+      // Rapid fire barge-in attempts - first should succeed
+      mockSpeechPipeline.simulateBargeIn();
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      // After first barge-in, state is now 'listening'
+      // Transition back to speaking through proper state machine
+      manager._state.startProcessing('test2');
+      manager._state.startSpeaking('response2');
+
+      // Second attempt within cooldown should be ignored
+      mockSpeechPipeline.simulateBargeIn();
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      // Transition back to speaking again
+      // After ignored barge-in, state should still be 'speaking'
+      // But if barge-in was processed, we'd be in 'listening'
+      // Since cooldown blocked it, we're still in 'speaking', try another
+      mockSpeechPipeline.simulateBargeIn();
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      // Only the first barge-in should have been processed (cooldown prevents others)
+      assert.strictEqual(bargeInCount, 1);
+    });
+
+    it('should allow barge-in after cooldown expires', async () => {
+      let bargeInCount = 0;
+      manager.on('barge_in', () => { bargeInCount++; });
+
+      // Manually transition to speaking
+      manager._state.startListening();
+      manager._state.startProcessing('test');
+      manager._state.startSpeaking('response');
+
+      // First barge-in
+      mockSpeechPipeline.simulateBargeIn();
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      // Wait for cooldown to expire (default 200ms + buffer)
+      await new Promise(resolve => setTimeout(resolve, 250));
+
+      // Get back to speaking and try again (proper state transitions)
+      manager._state.startProcessing('test2');
+      manager._state.startSpeaking('response2');
+      mockSpeechPipeline.simulateBargeIn();
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      // Both barge-ins should have been processed
+      assert.strictEqual(bargeInCount, 2);
+    });
+
+    it('should not barge-in when bargeInEnabled is false', async () => {
+      // Create manager with barge-in disabled
+      manager._config.bargeInEnabled = false;
+
+      let bargeInEmitted = false;
+      manager.on('barge_in', () => { bargeInEmitted = true; });
+
+      // Manually transition to speaking
+      manager._state.startListening();
+      manager._state.startProcessing('test');
+      manager._state.startSpeaking('response');
+
+      mockTtsPipeline._speaking = true;
+      mockSpeechPipeline.simulateBargeIn();
+
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      // Barge-in should not have been triggered
+      assert.strictEqual(bargeInEmitted, false);
+      // TTS should still be speaking
+      assert.strictEqual(mockTtsPipeline._speaking, true);
+    });
   });
 
   describe('connection monitoring', () => {

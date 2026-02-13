@@ -54,6 +54,8 @@ import { TtsPlaybackPipeline } from '../tts/tts-playback-pipeline.mjs';
  * @property {number} [bufferSizeMs=500] - Jitter buffer size
  * @property {number} [lowWatermarkMs=100] - Start playback threshold
  * @property {number} [connectionPollMs=5000] - Connection check interval
+ * @property {boolean} [bargeInEnabled=true] - Whether barge-in is enabled
+ * @property {number} [bargeInCooldownMs=200] - Barge-in cooldown/debounce period
  */
 
 /**
@@ -69,7 +71,9 @@ export const DEFAULT_SESSION_CONFIG = Object.freeze({
   minSpeechMs: 500,
   bufferSizeMs: 500,
   lowWatermarkMs: 100,
-  connectionPollMs: 5000
+  connectionPollMs: 5000,
+  bargeInEnabled: true,
+  bargeInCooldownMs: 200
 });
 
 /**
@@ -126,6 +130,9 @@ export class SessionManager extends EventEmitter {
 
     /** @type {boolean} */
     this._processingTranscript = false;
+
+    /** @type {number} - Timestamp of last barge-in for cooldown */
+    this._lastBargeInTime = 0;
 
     this._setupStateEvents();
     this._setupConnectionEvents();
@@ -435,12 +442,32 @@ export class SessionManager extends EventEmitter {
 
   /**
    * Handle barge-in (user interrupted agent)
+   *
+   * Per T030 and algorithm_and_data_structures.md:
+   * - Stops TTS synthesis and playback immediately
+   * - Clears jitter buffer
+   * - Transitions to listening state
+   * - Enforces cooldown to prevent rapid repeated interrupts
+   *
    * @private
    */
   _handleBargeIn() {
+    // Check if barge-in is enabled
+    if (this._config.bargeInEnabled === false) {
+      return;
+    }
+
     if (this._state.status !== 'speaking') {
       return;
     }
+
+    // Check cooldown to prevent rapid repeated interrupts
+    const now = Date.now();
+    const cooldownMs = this._config.bargeInCooldownMs ?? 200;
+    if (now - this._lastBargeInTime < cooldownMs) {
+      return;
+    }
+    this._lastBargeInTime = now;
 
     // Stop TTS immediately
     if (this._ttsPipeline) {
