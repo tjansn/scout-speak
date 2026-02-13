@@ -363,6 +363,20 @@ This document defines the complete implementation roadmap for Scout Phase 0 - a 
   - OpenClaw Gateway's responsibility for transport arbitration documented
   - No implementation code needed - documentation only
 
+- T052: CLI Entry Point Integration ✓
+  - Complete CLI entry point implementation (src/index.mjs)
+  - First-run detection triggers setup wizard automatically
+  - Setup wizard saves configuration on successful completion
+  - Configuration loaded using ConfigPersistence
+  - SessionManager initialized with all components
+  - ConsoleUI attached for conversation display
+  - Graceful shutdown on SIGINT/SIGTERM
+  - CLI argument parsing (--config, --help, --version, --setup, --debug, --log-level)
+  - Logger integration with configurable log level
+  - Error handling with user-friendly messages
+  - Added whisper_path to Config schema and validation
+  - Unit tests in tests/unit/cli/index.test.mjs (18 test cases)
+
 **What Exists:**
 - Discord voice bots (`voice/discord-voice-v6.mjs`) using CLOUD ElevenLabs STT/TTS and direct Anthropic API calls
 - Comprehensive specification documents in `specs/` (12 files, ~50KB)
@@ -390,7 +404,7 @@ This document defines the complete implementation roadmap for Scout Phase 0 - a 
 | M3 | OpenClaw Integration | T018-T021, T050 | P1 (Core) | COMPLETE |
 | M4 | Speech Synthesis (TTS, Jitter Buffer) | T022-T028 | P1 (Core) | COMPLETE |
 | M5 | Session Management & Barge-in | T029-T034 | P1 (Core) | COMPLETE |
-| M6 | First-Run Setup, Error Handling & Features | T035-T044, T051 | P2 (Features) | COMPLETE |
+| M6 | First-Run Setup, Error Handling & Features | T035-T044, T051-T052 | P2 (Features) | COMPLETE |
 | M7 | Documentation & README | T045-T048 | P3 (Polish) | COMPLETE |
 
 ---

@@ -17,7 +17,8 @@ import { constants as fsConstants } from 'fs';
  * @typedef {Object} Config
  * @property {string} gateway_url - OpenClaw gateway URL (localhost only)
  * @property {string} gateway_token - Authentication token for gateway
- * @property {string} stt_model_path - Path to whisper.cpp model
+ * @property {string} whisper_path - Path to whisper.cpp executable
+ * @property {string} stt_model_path - Path to whisper.cpp GGML model
  * @property {string} tts_model_path - Path to Piper TTS voice model
  * @property {string} tts_voice - TTS voice name
  * @property {number} tts_sample_rate - TTS output sample rate
@@ -50,6 +51,7 @@ import { constants as fsConstants } from 'fs';
 export const DEFAULT_CONFIG = Object.freeze({
   gateway_url: 'http://localhost:18789',
   gateway_token: '',
+  whisper_path: '',
   stt_model_path: '',
   tts_model_path: '',
   tts_voice: 'en_US-lessac-medium',
@@ -141,6 +143,15 @@ export async function validateConfig(config, options = {}) {
       errors.push({ field: 'gateway_token', message: 'Gateway token must be a string' });
     }
     // Note: Empty token is allowed - gateway may not require auth
+  }
+
+  // whisper.cpp path validation
+  if (config.whisper_path !== undefined) {
+    if (typeof config.whisper_path !== 'string') {
+      errors.push({ field: 'whisper_path', message: 'whisper.cpp path must be a string' });
+    } else if (checkFilePaths && config.whisper_path && !await fileExists(config.whisper_path)) {
+      errors.push({ field: 'whisper_path', message: 'whisper.cpp executable not found' });
+    }
   }
 
   // STT model path validation

@@ -9,6 +9,7 @@
  * @typedef {Object} ScoutConfig
  * @property {string} gateway_url
  * @property {string} gateway_token
+ * @property {string} whisper_path
  * @property {string} stt_model_path
  * @property {string} tts_model_path
  * @property {string} tts_voice
@@ -101,6 +102,7 @@ export function createMockConfig(overrides = {}) {
   return {
     gateway_url: 'http://localhost:18789',
     gateway_token: 'test-token',
+    whisper_path: '/mock/path/to/whisper',
     stt_model_path: '/mock/path/to/whisper.bin',
     tts_model_path: '/mock/path/to/piper.onnx',
     tts_voice: 'en_US-lessac-medium',
