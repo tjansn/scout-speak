@@ -35,16 +35,19 @@ echo "→ Checking for secrets..."
 SECRET_PATTERNS='(password|secret|api[_-]?key|token|private[_-]?key|credentials)[[:space:]]*[:=][[:space:]]*["\x27][^"\x27]{8,}'
 
 # Check staged files for secret patterns
-STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(mjs|js|ts|json)$' | grep -v 'package-lock.json' | grep -v 'config.json.example')
+# Use || true to prevent exit on no matches (when no .mjs/.js/.ts/.json files are staged)
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(mjs|js|ts|json)$' | grep -v 'package-lock.json' | grep -v 'config.json.example' || true)
 
-for FILE in $STAGED_FILES; do
-  if [ -f "$FILE" ]; then
-    if grep -iE "$SECRET_PATTERNS" "$FILE" > /dev/null 2>&1; then
-      echo "❌ Potential secret found in: $FILE"
-      echo "   Please remove hardcoded secrets before committing."
-      exit 1
+if [ -n "$STAGED_FILES" ]; then
+  for FILE in $STAGED_FILES; do
+    if [ -f "$FILE" ]; then
+      if grep -iE "$SECRET_PATTERNS" "$FILE" > /dev/null 2>&1; then
+        echo "❌ Potential secret found in: $FILE"
+        echo "   Please remove hardcoded secrets before committing."
+        exit 1
+      fi
     fi
-  fi
-done
+  done
+fi
 
 echo "✅ All pre-commit checks passed!"
