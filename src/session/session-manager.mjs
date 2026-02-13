@@ -133,6 +133,9 @@ export class SessionManager extends EventEmitter {
     this._running = false;
 
     /** @type {boolean} */
+    this._paused = false;
+
+    /** @type {boolean} */
     this._processingTranscript = false;
 
     /** @type {number} - Timestamp of last barge-in for cooldown */
@@ -196,6 +199,14 @@ export class SessionManager extends EventEmitter {
    */
   get isInitialized() {
     return this._initialized;
+  }
+
+  /**
+   * Check if session is paused
+   * @returns {boolean}
+   */
+  get isPaused() {
+    return this._paused;
   }
 
   /**
@@ -304,12 +315,77 @@ export class SessionManager extends EventEmitter {
     }
 
     this._running = false;
+    this._paused = false;
     this._processingTranscript = false;
 
     // Transition to idle
     this._state.stop('session_ended');
 
     this.emit('stopped');
+  }
+
+  /**
+   * Pause the session (stop listening but maintain state)
+   *
+   * Per T034: Pause/resume allows temporary suspension of the conversation
+   * without losing the current session state. Useful for:
+   * - Temporarily muting the microphone
+   * - Handling phone calls or other interruptions
+   *
+   * Unlike stop(), pause() preserves:
+   * - Session ID for continuity
+   * - Last transcript and response
+   * - Connection monitoring continues
+   */
+  pause() {
+    if (!this._running || this._paused) {
+      return;
+    }
+
+    // Stop TTS if speaking
+    if (this._ttsPipeline && this._ttsPipeline.speaking) {
+      this._ttsPipeline.stop();
+    }
+
+    // Stop speech pipeline (microphone capture)
+    if (this._speechPipeline) {
+      this._speechPipeline.stop();
+    }
+
+    this._paused = true;
+    this._processingTranscript = false;
+
+    // Transition to idle but keep running flag true to indicate we're paused not stopped
+    // We use a special reason to distinguish from stop
+    this._state.stop('paused');
+
+    this.emit('paused');
+  }
+
+  /**
+   * Resume a paused session
+   *
+   * Resumes listening after a pause. Connection monitoring continues
+   * and session state is preserved.
+   *
+   * @returns {Promise<void>}
+   */
+  async resume() {
+    if (!this._running || !this._paused) {
+      return;
+    }
+
+    this._paused = false;
+
+    // Restart speech pipeline
+    if (this._speechPipeline) {
+      this._speechPipeline.start();
+    }
+
+    // Transition back to listening
+    this._state.startListening();
+
+    this.emit('resumed');
   }
 
   /**
@@ -336,6 +412,7 @@ export class SessionManager extends EventEmitter {
     return {
       initialized: this._initialized,
       running: this._running,
+      paused: this._paused,
       status: this._state.status,
       openclawConnected: this._state.openclawConnected,
       speechPipeline: this._speechPipeline?.getStats() ?? null,

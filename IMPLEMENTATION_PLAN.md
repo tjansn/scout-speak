@@ -6,7 +6,7 @@ This document defines the complete implementation roadmap for Scout Phase 0 - a 
 
 ### Current State Analysis (Verified 2026-02-13)
 
-**Project Status:** M4 COMPLETE. M5 IN PROGRESS.
+**Project Status:** M5 COMPLETE. M6 IN PROGRESS.
 
 **Plan Verification:** All 12 specification files reviewed. All 51 tasks verified against specs. Priority order confirmed correct per backpressure.md. No blocking gaps identified.
 
@@ -179,7 +179,7 @@ This document defines the complete implementation roadmap for Scout Phase 0 - a 
 - T026: Audio Crossfade at Chunk Boundaries - PENDING (P2, deferred)
 - T028: TTS Fallback to Text Display - PENDING (P2, deferred)
 
-**M5: Session Management & Barge-in - IN PROGRESS (2026-02-13)**
+**M5: Session Management & Barge-in - COMPLETE (2026-02-13)**
 - T029: Session Manager Implementation ✓
   - src/session/session-manager.mjs implementation
   - tests/unit/session/session-manager.test.mjs comprehensive unit tests
@@ -215,7 +215,11 @@ This document defines the complete implementation roadmap for Scout Phase 0 - a 
   - Loop continues until session ended
   - Tests: multi-turn conversation integration test
 
-- T034: Session Start/Stop Controls - PENDING (P2)
+- T034: Session Start/Stop Controls ✓
+  - pause() method for temporary suspension (preserves state/session)
+  - resume() method to continue after pause
+  - isPaused getter and paused status in getStats()
+  - Full test coverage in tests/unit/session/session-manager.test.mjs
 
 **What Exists:**
 - Discord voice bots (`voice/discord-voice-v6.mjs`) using CLOUD ElevenLabs STT/TTS and direct Anthropic API calls

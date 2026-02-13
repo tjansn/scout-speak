@@ -872,6 +872,150 @@ describe('SessionManager', () => {
     });
   });
 
+  describe('pause and resume (T034)', () => {
+    beforeEach(async () => {
+      createTestManager();
+      await manager.start();
+    });
+
+    it('should not be paused initially', () => {
+      assert.strictEqual(manager.isPaused, false);
+    });
+
+    it('should pause the session', () => {
+      manager.pause();
+
+      assert.strictEqual(manager.isPaused, true);
+      assert.strictEqual(manager.isRunning, true); // Still running, just paused
+      assert.strictEqual(manager.status, 'idle'); // Transitions to idle when paused
+    });
+
+    it('should emit paused event', () => {
+      let pausedEmitted = false;
+      manager.on('paused', () => { pausedEmitted = true; });
+
+      manager.pause();
+
+      assert.strictEqual(pausedEmitted, true);
+    });
+
+    it('should stop speech pipeline when paused', () => {
+      manager.pause();
+
+      assert.strictEqual(mockSpeechPipeline.isRunning, false);
+    });
+
+    it('should stop TTS when paused during speaking', async () => {
+      // Manually transition to speaking
+      manager._state.startListening();
+      manager._state.startProcessing('test');
+      manager._state.startSpeaking('response');
+      mockTtsPipeline._speaking = true;
+
+      manager.pause();
+
+      assert.strictEqual(mockTtsPipeline._speaking, false);
+    });
+
+    it('should resume a paused session', async () => {
+      manager.pause();
+      assert.strictEqual(manager.isPaused, true);
+
+      await manager.resume();
+
+      assert.strictEqual(manager.isPaused, false);
+      assert.strictEqual(manager.status, 'listening');
+    });
+
+    it('should emit resumed event', async () => {
+      let resumedEmitted = false;
+      manager.on('resumed', () => { resumedEmitted = true; });
+
+      manager.pause();
+      await manager.resume();
+
+      assert.strictEqual(resumedEmitted, true);
+    });
+
+    it('should restart speech pipeline on resume', async () => {
+      manager.pause();
+      assert.strictEqual(mockSpeechPipeline.isRunning, false);
+
+      await manager.resume();
+
+      assert.strictEqual(mockSpeechPipeline.isRunning, true);
+    });
+
+    it('should not pause when already paused', () => {
+      let pauseCount = 0;
+      manager.on('paused', () => { pauseCount++; });
+
+      manager.pause();
+      manager.pause(); // Second call should be no-op
+
+      assert.strictEqual(pauseCount, 1);
+    });
+
+    it('should not resume when not paused', async () => {
+      let resumeCount = 0;
+      manager.on('resumed', () => { resumeCount++; });
+
+      await manager.resume(); // Not paused, should be no-op
+
+      assert.strictEqual(resumeCount, 0);
+    });
+
+    it('should not pause when not running', async () => {
+      manager.stop();
+      assert.strictEqual(manager.isRunning, false);
+
+      let pausedEmitted = false;
+      manager.on('paused', () => { pausedEmitted = true; });
+
+      manager.pause();
+
+      assert.strictEqual(pausedEmitted, false);
+    });
+
+    it('should preserve session state after pause/resume', async () => {
+      // Simulate a transcript to set state
+      mockSpeechPipeline.simulateTranscript('Hello');
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Get state before pause
+      const stateBefore = manager.getState();
+      const sessionIdBefore = manager.sessionId;
+
+      // Pause and resume
+      manager.pause();
+      await manager.resume();
+
+      // Session ID should be preserved
+      assert.strictEqual(manager.sessionId, sessionIdBefore);
+      // Last transcript should be preserved
+      assert.strictEqual(manager.getState().lastTranscript, stateBefore.lastTranscript);
+    });
+
+    it('should include paused status in getStats', async () => {
+      const statsBefore = manager.getStats();
+      assert.strictEqual(statsBefore.paused, false);
+
+      manager.pause();
+
+      const statsAfter = manager.getStats();
+      assert.strictEqual(statsAfter.paused, true);
+    });
+
+    it('should clear paused state on stop', async () => {
+      manager.pause();
+      assert.strictEqual(manager.isPaused, true);
+
+      manager.stop();
+
+      assert.strictEqual(manager.isPaused, false);
+    });
+  });
+
   describe('createSessionManager', () => {
     it('should create a SessionManager instance', () => {
       const manager = createSessionManager(TEST_CONFIG);
