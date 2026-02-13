@@ -8,16 +8,23 @@
  * - Pads with silence on underrun (no clicks)
  * - Clears immediately on barge-in
  *
+ * Per T026 and specs/system_architecture_and_data_flow.md:
+ * - Crossfades at chunk boundaries to prevent clicks
+ * - Short (5-10ms) linear fade between chunks
+ * - Minimal processing overhead
+ *
  * Configuration (from spec):
  * - buffer_size_ms: 500ms total capacity
  * - low_watermark_ms: 100ms (start playback threshold)
  * - frame_duration_ms: 20ms
+ * - crossfade_ms: 5ms (crossfade duration at chunk boundaries)
  *
  * FR-5: Continuous audio with no cuts/glitches
  */
 
 import { EventEmitter } from 'events';
 import { AudioBuffer, msToSamples } from '../audio/audio-buffer.mjs';
+import { AudioCrossfader } from '../audio/crossfade.mjs';
 
 /**
  * @typedef {Object} JitterBufferConfig
@@ -25,6 +32,8 @@ import { AudioBuffer, msToSamples } from '../audio/audio-buffer.mjs';
  * @property {number} lowWatermarkMs - Start playback threshold in ms
  * @property {number} frameDurationMs - Playback frame size in ms
  * @property {number} sampleRate - Sample rate for calculations
+ * @property {number} crossfadeMs - Crossfade duration at chunk boundaries in ms
+ * @property {boolean} crossfadeEnabled - Whether to apply crossfade between chunks
  */
 
 /**
@@ -36,6 +45,8 @@ import { AudioBuffer, msToSamples } from '../audio/audio-buffer.mjs';
  * @property {number} underruns - Count of buffer underruns
  * @property {number} totalSamplesWritten - Total samples written
  * @property {number} totalSamplesRead - Total samples read
+ * @property {number} chunksProcessed - Number of chunks written (for crossfade)
+ * @property {boolean} crossfadeEnabled - Whether crossfade is enabled
  */
 
 /**
@@ -45,7 +56,9 @@ export const DEFAULT_JITTER_CONFIG = Object.freeze({
   bufferSizeMs: 500,
   lowWatermarkMs: 100,
   frameDurationMs: 20,
-  sampleRate: 22050
+  sampleRate: 22050,
+  crossfadeMs: 5,
+  crossfadeEnabled: true
 });
 
 /**
@@ -84,6 +97,14 @@ export class JitterBuffer extends EventEmitter {
 
     /** @type {number} */
     this._totalRead = 0;
+
+    /** @type {AudioCrossfader|null} */
+    this._crossfader = this.config.crossfadeEnabled
+      ? new AudioCrossfader({
+        fadeDurationMs: this.config.crossfadeMs,
+        sampleRate: this.config.sampleRate
+      })
+      : null;
   }
 
   /**
@@ -119,10 +140,21 @@ export class JitterBuffer extends EventEmitter {
   }
 
   /**
+   * Check if crossfade is enabled
+   * @returns {boolean}
+   */
+  get crossfadeEnabled() {
+    return this._crossfader !== null;
+  }
+
+  /**
    * Write audio samples to the buffer
    *
    * If the buffer reaches low watermark and playback wasn't active,
    * emits 'ready' event to signal playback can begin.
+   *
+   * When crossfade is enabled, applies a short crossfade at the boundary
+   * between consecutive chunks to prevent clicks/pops.
    *
    * @param {Int16Array|Buffer} samples - Audio samples to buffer
    * @returns {number} Number of samples written
@@ -144,6 +176,11 @@ export class JitterBuffer extends EventEmitter {
       int16Samples = samples;
     } else {
       throw new Error('Samples must be Int16Array or Buffer');
+    }
+
+    // Apply crossfade if enabled
+    if (this._crossfader !== null) {
+      int16Samples = this._crossfader.process(int16Samples);
     }
 
     const written = this._buffer.write(int16Samples);
@@ -241,11 +278,16 @@ export class JitterBuffer extends EventEmitter {
    * Clear buffer immediately
    *
    * Used for barge-in - discards all buffered audio.
+   * Also resets the crossfader to prevent crossfading
+   * with stale audio when new audio arrives.
    */
   clear() {
     this._buffer.clear();
     this._playbackActive = false;
     this._endOfStream = false;
+    if (this._crossfader) {
+      this._crossfader.reset();
+    }
     this.emit('cleared');
   }
 
@@ -253,6 +295,7 @@ export class JitterBuffer extends EventEmitter {
    * Reset buffer to initial state
    *
    * Clears buffer and resets all statistics.
+   * Also resets the crossfader state.
    */
   reset() {
     this._buffer.clear();
@@ -261,6 +304,9 @@ export class JitterBuffer extends EventEmitter {
     this._underruns = 0;
     this._totalWritten = 0;
     this._totalRead = 0;
+    if (this._crossfader) {
+      this._crossfader.reset();
+    }
   }
 
   /**
@@ -275,7 +321,9 @@ export class JitterBuffer extends EventEmitter {
       playbackActive: this._playbackActive,
       underruns: this._underruns,
       totalSamplesWritten: this._totalWritten,
-      totalSamplesRead: this._totalRead
+      totalSamplesRead: this._totalRead,
+      chunksProcessed: this._crossfader?.chunksProcessed ?? 0,
+      crossfadeEnabled: this._crossfader !== null
     };
   }
 }

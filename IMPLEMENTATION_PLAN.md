@@ -176,7 +176,18 @@ This document defines the complete implementation roadmap for Scout Phase 0 - a 
   - Barge-in support via stop() method
   - Events: speaking_started, speaking_complete, speaking_stopped, ready, underrun, error
 
-- T026: Audio Crossfade at Chunk Boundaries - PENDING (P2, deferred)
+- T026: Audio Crossfade at Chunk Boundaries ✓
+  - src/audio/crossfade.mjs - AudioCrossfader class implementation
+  - Linear crossfade algorithm (5-10ms duration)
+  - process() method for streaming chunk processing
+  - reset() method for barge-in handling
+  - applyCrossfadeBetween() utility for one-shot crossfades
+  - JitterBuffer integration with crossfadeMs and crossfadeEnabled config
+  - Automatic crossfade on write() between consecutive chunks
+  - Crossfader reset on clear() and reset() for barge-in support
+  - Stats tracking (chunksProcessed, crossfadeEnabled)
+  - Full test coverage in tests/unit/audio/crossfade.test.mjs (12 test cases)
+  - Additional tests in tests/unit/tts/jitter-buffer.test.mjs (12 test cases for T026)
 
 - T028: TTS Fallback to Text Display ✓
   - src/ui/console-ui.mjs updated with showTtsFallback() method
