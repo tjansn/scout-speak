@@ -177,7 +177,14 @@ This document defines the complete implementation roadmap for Scout Phase 0 - a 
   - Events: speaking_started, speaking_complete, speaking_stopped, ready, underrun, error
 
 - T026: Audio Crossfade at Chunk Boundaries - PENDING (P2, deferred)
-- T028: TTS Fallback to Text Display - PENDING (P2, deferred)
+
+- T028: TTS Fallback to Text Display ✓
+  - src/ui/console-ui.mjs updated with showTtsFallback() method
+  - tts_fallback event handler added to ConsoleUI._setupEventHandlers()
+  - Shows "[Audio unavailable - showing text]" notice and response text
+  - Displays in ALL display modes (since audio is unavailable)
+  - Full test coverage in tests/unit/ui/console-ui.test.mjs
+  - Integration tests in tests/unit/session/session-manager.test.mjs
 
 **M5: Session Management & Barge-in - COMPLETE (2026-02-13)**
 - T029: Session Manager Implementation ✓

@@ -530,4 +530,149 @@ describe('ConsoleUI', () => {
       assert.ok(!mockOutput.getOutput().includes('You:'));
     });
   });
+
+  describe('T028: TTS Fallback to Text Display', () => {
+    let sessionManager;
+
+    beforeEach(() => {
+      sessionManager = new MockSessionManager();
+      consoleUI.attach(sessionManager);
+      mockOutput.clear();
+    });
+
+    describe('showTtsFallback', () => {
+      it('should display fallback notice and response text', () => {
+        consoleUI.showTtsFallback('This is the agent response');
+
+        const output = mockOutput.getOutput();
+        assert.ok(output.includes('[Audio unavailable - showing text]'));
+        assert.ok(output.includes('Agent: This is the agent response'));
+      });
+
+      it('should display response text in transcript mode', () => {
+        consoleUI.setDisplayMode('transcript');
+        mockOutput.clear();
+
+        consoleUI.showTtsFallback('Response in transcript mode');
+
+        const output = mockOutput.getOutput();
+        assert.ok(output.includes('[Audio unavailable - showing text]'));
+        assert.ok(output.includes('Agent: Response in transcript mode'));
+      });
+
+      it('should display response text in minimal mode', () => {
+        consoleUI.setDisplayMode('minimal');
+        mockOutput.clear();
+
+        consoleUI.showTtsFallback('Response in minimal mode');
+
+        const output = mockOutput.getOutput();
+        assert.ok(output.includes('[Audio unavailable - showing text]'));
+        assert.ok(output.includes('Agent: Response in minimal mode'));
+      });
+
+      it('should display response text in voice_only mode (without notice)', () => {
+        consoleUI.setDisplayMode('voice_only');
+        mockOutput.clear();
+
+        consoleUI.showTtsFallback('Response in voice only mode');
+
+        const output = mockOutput.getOutput();
+        // Should NOT include the notice in voice_only mode
+        assert.ok(!output.includes('[Audio unavailable - showing text]'));
+        // But MUST include the response text (since audio is unavailable)
+        assert.ok(output.includes('Agent: Response in voice only mode'));
+      });
+    });
+
+    describe('tts_fallback event handling', () => {
+      it('should handle tts_fallback events', () => {
+        const onFallbackDisplayed = mock.fn();
+        consoleUI.on('tts_fallback_displayed', onFallbackDisplayed);
+
+        sessionManager.emit('tts_fallback', { text: 'Fallback response text' });
+
+        const output = mockOutput.getOutput();
+        assert.ok(output.includes('[Audio unavailable - showing text]'));
+        assert.ok(output.includes('Agent: Fallback response text'));
+        assert.strictEqual(onFallbackDisplayed.mock.calls.length, 1);
+        assert.deepStrictEqual(onFallbackDisplayed.mock.calls[0].arguments[0], {
+          text: 'Fallback response text'
+        });
+      });
+
+      it('should handle tts_fallback in all display modes', () => {
+        // Test each display mode
+        const modes = ['voice_only', 'minimal', 'transcript'];
+
+        for (const mode of modes) {
+          consoleUI.setDisplayMode(mode);
+          mockOutput.clear();
+
+          sessionManager.emit('tts_fallback', { text: `Fallback in ${mode} mode` });
+
+          const output = mockOutput.getOutput();
+          // Response text should always be shown
+          assert.ok(
+            output.includes(`Agent: Fallback in ${mode} mode`),
+            `Response should be shown in ${mode} mode`
+          );
+        }
+      });
+    });
+
+    describe('Color output for TTS fallback', () => {
+      let colorUI;
+      let colorOutput;
+
+      beforeEach(() => {
+        colorOutput = new MockOutputStream();
+        colorUI = new ConsoleUI({
+          displayMode: 'minimal',
+          colorOutput: true,
+          outputStream: colorOutput
+        });
+      });
+
+      it('should apply yellow color to fallback notice', () => {
+        colorUI.showTtsFallback('Test response');
+        const output = colorOutput.getOutput();
+        assert.ok(output.includes(COLORS.yellow));
+        assert.ok(output.includes('[Audio unavailable - showing text]'));
+      });
+
+      it('should apply green color to response text', () => {
+        colorUI.showTtsFallback('Test response');
+        const output = colorOutput.getOutput();
+        assert.ok(output.includes(COLORS.green));
+        assert.ok(output.includes('Agent: Test response'));
+      });
+    });
+
+    describe('FR-9: Error handling per spec', () => {
+      it('should inform user when TTS fails and show text fallback', () => {
+        // Per PRD FR-9: "TTS fails: Show text response as fallback"
+        sessionManager.emit('tts_fallback', { text: 'This is the actual agent response' });
+
+        const output = mockOutput.getOutput();
+        // User should be informed that TTS failed
+        assert.ok(output.includes('[Audio unavailable - showing text]'));
+        // User should see the actual response text
+        assert.ok(output.includes('Agent: This is the actual agent response'));
+      });
+
+      it('should not generate fake responses (only display OpenClaw response)', () => {
+        // Per spec: "Never generate or synthesize fallback text"
+        // The displayed text should be exactly what was passed (from OpenClaw)
+        const openclawResponse = 'This is the real OpenClaw response';
+        sessionManager.emit('tts_fallback', { text: openclawResponse });
+
+        const output = mockOutput.getOutput();
+        assert.ok(output.includes(`Agent: ${openclawResponse}`));
+        // Should not contain any other "Agent:" prefix with different text
+        const agentLines = output.split('\n').filter(line => line.includes('Agent:'));
+        assert.strictEqual(agentLines.length, 1);
+      });
+    });
+  });
 });

@@ -1258,6 +1258,173 @@ describe('SessionManager wake word support (FR-11)', () => {
   });
 });
 
+describe('T028: TTS Fallback to Text Display integration', () => {
+  /** @type {SessionManager} */
+  let manager;
+  /** @type {MockSpeechPipeline} */
+  let mockSpeech;
+  /** @type {MockTtsPipeline} */
+  let mockTts;
+  /** @type {MockOpenClawClient} */
+  let mockOpenClaw;
+  /** @type {MockConnectionMonitor} */
+  let mockConn;
+
+  beforeEach(async () => {
+    manager = new SessionManager(TEST_CONFIG);
+
+    mockSpeech = new MockSpeechPipeline();
+    mockTts = new MockTtsPipeline();
+    mockOpenClaw = new MockOpenClawClient();
+    mockConn = new MockConnectionMonitor();
+
+    // Replace internal components with mocks
+    manager._speechPipeline = mockSpeech;
+    manager._ttsPipeline = mockTts;
+    manager._openclawClient = mockOpenClaw;
+    manager._connectionMonitor = mockConn;
+    manager._setupSpeechPipelineEvents();
+    manager._setupTtsPipelineEvents();
+    manager._initialized = true;
+
+    // Add error handler to prevent unhandled error crashes in tests
+    addErrorHandler(manager);
+  });
+
+  afterEach(async () => {
+    if (manager) {
+      await manager.dispose();
+    }
+  });
+
+  it('should emit tts_fallback event when TTS errors during speaking', async () => {
+    const events = [];
+    manager.on('tts_fallback', (data) => events.push({ type: 'tts_fallback', data }));
+
+    await manager.start();
+
+    // Simulate a response received and manually set state to speaking
+    const responseText = 'Test response';
+    mockOpenClaw.setNextResponse({ text: responseText, sessionId: 's1', durationMs: 100 });
+
+    // Manually transition state to simulate the flow
+    manager._state.startProcessing('Hello');
+    manager._state.startSpeaking(responseText);
+
+    // Emit TTS error while in speaking state
+    mockTts.emit('error', { message: 'Piper process failed' });
+    await new Promise(resolve => setImmediate(resolve));
+
+    // Should have emitted tts_fallback event
+    const fallbackEvent = events.find(e => e.type === 'tts_fallback');
+    assert.ok(fallbackEvent, 'Should emit tts_fallback event');
+    assert.strictEqual(fallbackEvent.data.text, responseText, 'Fallback should contain agent response');
+  });
+
+  it('should emit tts_fallback with correct response text (per FR-9)', async () => {
+    const expectedResponse = 'This is the exact OpenClaw response text';
+    let fallbackData = null;
+    manager.on('tts_fallback', (data) => { fallbackData = data; });
+
+    await manager.start();
+
+    // Set up state to be in speaking
+    manager._state.startProcessing('Question');
+    manager._state.startSpeaking(expectedResponse);
+
+    // Trigger TTS error
+    mockTts.emit('error', { message: 'TTS synthesis failed' });
+    await new Promise(resolve => setImmediate(resolve));
+
+    // Per spec: "Never generate or synthesize fallback text"
+    // The text should be exactly the OpenClaw response
+    assert.ok(fallbackData, 'Fallback event should be emitted');
+    assert.strictEqual(fallbackData.text, expectedResponse, 'Fallback text must match OpenClaw response exactly');
+  });
+
+  it('should transition state to listening after TTS error', async () => {
+    const stateChanges = [];
+    manager.on('state_changed', (data) => { stateChanges.push(data.to); });
+
+    await manager.start();
+
+    // Set up speaking state
+    manager._state.startProcessing('Hello');
+    manager._state.startSpeaking('Response');
+
+    // Trigger TTS error
+    mockTts.emit('error', { message: 'TTS failed' });
+    await new Promise(resolve => setImmediate(resolve));
+
+    // State should return to listening to continue conversation
+    const lastState = stateChanges[stateChanges.length - 1];
+    assert.strictEqual(lastState, 'listening', 'Should transition back to listening after TTS error');
+  });
+
+  it('should emit both error and tts_fallback events', async () => {
+    const events = [];
+    manager.on('error', (data) => events.push({ type: 'error', data }));
+    manager.on('tts_fallback', (data) => events.push({ type: 'tts_fallback', data }));
+
+    await manager.start();
+
+    // Set up speaking state
+    manager._state.startProcessing('Hello');
+    manager._state.startSpeaking('Test');
+
+    mockTts.emit('error', { message: 'Process died' });
+    await new Promise(resolve => setImmediate(resolve));
+
+    // Should have both events for complete error handling
+    const errorEvent = events.find(e => e.type === 'error');
+    const fallbackEvent = events.find(e => e.type === 'tts_fallback');
+
+    assert.ok(errorEvent, 'Error event should be emitted');
+    assert.strictEqual(errorEvent.data.type, 'tts', 'Error type should be tts');
+    assert.ok(fallbackEvent, 'Fallback event should be emitted');
+  });
+
+  it('should only emit tts_fallback when in speaking state', async () => {
+    let fallbackEmitted = false;
+    manager.on('tts_fallback', () => { fallbackEmitted = true; });
+
+    await manager.start();
+
+    // Status is 'listening', NOT 'speaking'
+    assert.strictEqual(manager.status, 'listening');
+
+    // Emit TTS error when not speaking
+    mockTts.emit('error', { message: 'TTS failed' });
+    await new Promise(resolve => setImmediate(resolve));
+
+    // Should NOT emit fallback since we're not speaking
+    assert.strictEqual(fallbackEmitted, false, 'Should not emit tts_fallback when not speaking');
+  });
+
+  it('should include lastResponse text from state in fallback event', async () => {
+    const agentResponse = 'Complete agent message with multiple sentences. Including this one.';
+    let fallbackData = null;
+    manager.on('tts_fallback', (data) => { fallbackData = data; });
+
+    await manager.start();
+
+    // Set state with full response
+    manager._state.startProcessing('Test');
+    manager._state.startSpeaking(agentResponse);
+
+    // Verify lastResponse is set
+    assert.strictEqual(manager._state.lastResponse, agentResponse);
+
+    // Trigger error
+    mockTts.emit('error', { message: 'Synthesis failed' });
+    await new Promise(resolve => setImmediate(resolve));
+
+    // Verify complete response is in fallback
+    assert.ok(fallbackData);
+    assert.strictEqual(fallbackData.text, agentResponse, 'Fallback should contain complete agent response');
+  });
+});
+
 describe('SessionManager integration scenarios', () => {
   /**
    * Test complete conversation flow with mocked dependencies

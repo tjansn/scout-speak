@@ -222,6 +222,31 @@ export class ConsoleUI extends EventEmitter {
   }
 
   /**
+   * Show TTS fallback message and response text
+   *
+   * Per T028 and PRD specs:
+   * When TTS synthesis fails, display the agent's response as text.
+   * This is shown in ALL display modes since it's a fallback for audio.
+   *
+   * @param {string} text - The agent response text to display
+   */
+  showTtsFallback(text) {
+    // Show fallback notice in all modes except voice_only
+    if (this._formatter.displayMode !== 'voice_only') {
+      const notice = this._colorOutput
+        ? `${COLORS.yellow}[Audio unavailable - showing text]${COLORS.reset}`
+        : '[Audio unavailable - showing text]';
+      this._writeLine(notice);
+    }
+
+    // Always show the response text in all modes (since user can't hear it)
+    const responseText = this._colorOutput
+      ? `${COLORS.green}Agent: ${text}${COLORS.reset}`
+      : `Agent: ${text}`;
+    this._writeLine(responseText);
+  }
+
+  /**
    * Show connection status
    * @param {boolean} connected - Whether connected
    */
@@ -284,7 +309,8 @@ export class ConsoleUI extends EventEmitter {
       speaking_started: this._onSpeakingStarted.bind(this),
       speaking_complete: this._onSpeakingComplete.bind(this),
       barge_in: this._onBargeIn.bind(this),
-      wake_word_detected: this._onWakeWordDetected.bind(this)
+      wake_word_detected: this._onWakeWordDetected.bind(this),
+      tts_fallback: this._onTtsFallback.bind(this)
     };
 
     for (const [event, handler] of Object.entries(this._handlers)) {
@@ -404,6 +430,20 @@ export class ConsoleUI extends EventEmitter {
         : '[Wake word detected]');
     }
     this.emit('wake_word_displayed', data);
+  }
+
+  /**
+   * Handle TTS fallback events
+   *
+   * Per T028 and specs/system_architecture_and_data_flow.md:
+   * When TTS synthesis fails, display the agent's response as text fallback.
+   *
+   * @param {{text: string}} data - Fallback data containing response text
+   * @private
+   */
+  _onTtsFallback(data) {
+    this.showTtsFallback(data.text);
+    this.emit('tts_fallback_displayed', data);
   }
 
   /**
